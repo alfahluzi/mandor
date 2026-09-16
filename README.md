@@ -25,22 +25,20 @@ global: ~/.agents/skills/project-manager/
 
 Restart or reload the agent host if required by that platform.
 
-Optional installer (replace the repository placeholder first):
+Optional installer:
 
 ```sh
-REPO_URL=https://github.com/<user>/<repo>.git sh install.sh --destination ~/.agents/skills
+REPO_URL=https://github.com/alfahluzi/project-manager.git sh install.sh --destination ~/.agents/skills
 ```
 
-One-line installation after the publisher replaces the placeholder default in
-`install.sh`:
+One-line installation:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/<user>/<repo>/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/alfahluzi/project-manager/main/install.sh | sh
 ```
 
-The published script's default `REPO_URL` must be replaced with the real public
-GitHub repository URL before using this form. The `REPO_URL`, `REF`, and
-`SKILL_SUBDIR` environment variables remain available for overrides. Set
+The `REPO_URL`, `REF`, and `SKILL_SUBDIR` environment variables remain available
+for overrides. Set
 `SKILL_SUBDIR` when the package is stored below a multi-skill repository root;
 the default assumes this package is the repository root.
 
@@ -101,9 +99,8 @@ project-manager/
   templates/json/*.json
 ```
 
-Publish checklist: replace the copyright placeholder in `LICENSE`; set the real
-repository URL in release documentation or installer usage; review links and
-platform compatibility; verify current directory submission rules before using
+Publish checklist: review links and platform compatibility; verify current
+directory submission rules before using
 agentskills.io, mdskills.ai, or agentskill.sh. Submit the package directory
 according to each directory's current instructions. No submission or command
 compatibility is claimed here.

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-REPO_URL=${REPO_URL:-https://github.com/<user>/<repo>.git}
+REPO_URL=${REPO_URL:-https://github.com/alfahluzi/project-manager.git}
 REF=${REF:-main}
 SKILL_SUBDIR=${SKILL_SUBDIR:-.}
 force=false
@@ -24,11 +24,6 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
-
-[ "$REPO_URL" != "https://github.com/<user>/<repo>.git" ] || {
-  echo "Set REPO_URL to the public GitHub repository URL before installing." >&2
-  exit 2
-}
 
 valid_destination() {
   case "$1" in
