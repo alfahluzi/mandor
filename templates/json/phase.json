@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0", "plan_name": "example-project", "phase_number": 0,
+  "milestone_id": "milestone-001", "title": "Foundation", "status": "todo",
+  "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-01T00:00:00Z",
+  "next_ids": {"source": 1, "task": 1, "change": 1}, "source_trace": [], "tasks": [], "change_request_log": []
+}

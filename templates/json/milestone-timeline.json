@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "name": "example-project",
+  "version": "1.0.0",
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "next_ids": {"source": 1, "milestone": 1, "wbs": 1, "risk": 1, "change": 1},
+  "approval": {"status": "requested", "timestamp": "2026-01-01T00:00:00Z", "evidence": null},
+  "source_trace": [],
+  "milestones": [],
+  "wbs": [],
+  "risk_register": [],
+  "change_request_log": []
+}
