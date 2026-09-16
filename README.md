@@ -60,8 +60,10 @@ project-manager --project PATH plan init example-project
 project-manager --project PATH plan list
 ```
 
-Use `--json` for interoperability. Every successful JSON mutation validates the
-full document, writes atomically, and regenerates `pm.html`; reads do not mutate.
+By default, commands print a human-readable representation. Use `--json` for
+machine-readable JSON and interoperability. Every successful JSON mutation
+validates the full document, writes atomically, and regenerates `pm.html`; reads
+do not mutate.
 Phase deletion rejects non-empty phases unless `--force`; forced deletion is
 irreversible. Milestone initialization refuses overwrite unless `--force`.
 Plan initialization is idempotent and preserves existing phase files.

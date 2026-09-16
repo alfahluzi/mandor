@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const util = require('util');
 const { generate } = require('./generate-pm-dashboard');
 
 const STATUSES = ['todo', 'in_progress', 'completed', 'failed'];
@@ -205,6 +206,15 @@ function help(resource) {
     + 'add/update/delete-change PLAN ITEM_ID --phase N [options]\n';
 }
 
+function formatHuman(value) {
+  return util.inspect(value, {
+    colors: false,
+    compact: false,
+    depth: null,
+    sorted: false
+  });
+}
+
 function main(argv) {
   if (argv.includes('--help')) {
     const resource = argv.find(value => value === 'milestone' || value === 'plan');
@@ -249,9 +259,7 @@ function main(argv) {
     throw new PMError('resource must be milestone or plan');
   }
 
-  process.stdout.write(`${parsed.json
-    ? JSON.stringify(value, null, 2)
-    : typeof value === 'string' ? value : JSON.stringify(value, null, 2)}\n`);
+  process.stdout.write(`${parsed.json ? JSON.stringify(value, null, 2) : formatHuman(value)}\n`);
   return 0;
 }
 if (require.main === module) { try { process.exitCode = main(process.argv.slice(2)); } catch (error) { process.stderr.write(`error: ${error.message}\n`); process.exitCode = 1; } }
