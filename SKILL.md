@@ -33,6 +33,22 @@ Approval requires explicit user approval. Stop at lifecycle gates. CLI mutations
 atomically validate JSON and regenerate `.project-manager/pm.html`; reads do not
 mutate.
 
+## Live dashboard
+
+For development, run a live HTTP dashboard that polls `/api/data` every second and
+auto-refreshes the JSON view. Markdown is pre-rendered to HTML once at startup.
+JSON changes from any CLI mutation appear immediately on next poll; Markdown
+changes need a restart (or hit `/api/rerender`).
+
+```sh
+project-manager dashboard --port 4173
+# or directly:
+node <skill-dir>/scripts/dashboard-server.js --project <project-path> --port 4173
+```
+
+Endpoints: `GET /` (HTML), `GET /api/data` (snapshot), `GET /api/health`,
+`GET /api/rerender`, `GET /raw/<path>` (path-safe raw files). Press Ctrl+C to stop.
+
 ## Setup
 
 Add the skill's wrapper to PATH so every command below can be invoked as a bare

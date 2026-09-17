@@ -200,7 +200,7 @@ function mutatePhaseContent(store, plan, options) { const number = options.phase
   phase.updated_at = now(); validatePhase(phase, file, milestones); store.commit(file, phase); store.refresh(); return phase;
 }
 
-const OPTION_KEYS = new Set(['name', 'version', 'force', 'status', 'evidence', 'location', 'claim', 'start', 'target', 'milestone_id', 'description', 'likelihood', 'impact', 'mitigation', 'owner', 'risk_status', 'summary', 'reason', 'affected_id', 'decision', 'phase', 'title', 'detail', 'task_id', 'message', 'index']);
+const OPTION_KEYS = new Set(['name', 'version', 'force', 'status', 'evidence', 'location', 'claim', 'start', 'target', 'milestone_id', 'description', 'likelihood', 'impact', 'mitigation', 'owner', 'risk_status', 'summary', 'reason', 'affected_id', 'decision', 'phase', 'title', 'detail', 'task_id', 'message', 'index', 'port', 'host']);
 function parseArgs(argv) { let project = '.', json = false; const words = []; for (let i = 0; i < argv.length; i += 1) { const word = argv[i]; if (word === '--json') json = true; else if (word === '--project') { if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new PMError('--project requires a value'); project = argv[++i]; } else words.push(word); } const positional = []; const options = {}; for (let i = 0; i < words.length; i += 1) { const word = words[i]; if (!word.startsWith('--')) { positional.push(word); continue; } const key = word.slice(2).replace(/-/g, '_'); if (!OPTION_KEYS.has(key)) throw new PMError(`unknown option: ${word}`); if (key === 'force') { if (options.force) throw new PMError('duplicate option: --force'); options.force = true; continue; } if (key === 'affected_id') { if (!words[i + 1] || words[i + 1].startsWith('--')) throw new PMError(`${word} requires a value`); (options.affected_id ||= []).push(words[++i]); continue; } if (options[key] !== undefined) throw new PMError(`duplicate option: ${word}`); if (!words[i + 1] || words[i + 1].startsWith('--')) throw new PMError(`${word} requires a value`); options[key] = words[++i]; } for (const key of ['phase', 'index']) if (options[key] !== undefined) { if (!/^\d+$/.test(options[key])) throw new PMError(`${key} must be an integer`); options[key] = Number(options[key]); } options._ = positional; return { project, json, options }; }
 function help(resource) {
   const lines = [];
@@ -216,12 +216,13 @@ function help(resource) {
     out('Global options:');
     out('  --project PATH   Target project directory (default: current directory)');
     out('  --json           Emit machine-readable JSON instead of human format');
-    out('  --help [TOPIC]   Show this help, or help for: init, milestone, plan');
+    out('  --help [TOPIC]   Show this help, or help for: init, milestone, plan, dashboard');
     out('');
     out('Commands:');
     out('  init                            Create .project-manager/ scaffold (idempotent)');
     out('  milestone [subcommand] [args]   Manage the milestone timeline');
     out('  plan [subcommand] [args]        Manage a plan and its phase files');
+    out('  dashboard [--port N]            Start live HTTP dashboard (polls /api/data every 1s)');
     out('');
     out('Typical workflow:');
     out('  1. project-manager init');
@@ -275,6 +276,28 @@ function help(resource) {
     out('  - Run `milestone approve --status approved` before adding plan phases.');
     return `${lines.join('\n')}\n`;
   }
+  if (resource === 'dashboard') {
+    out(`${usage.replace('<command> [args]', 'dashboard [--port N] [--host H]')}`);
+    out('');
+    out('Start a live HTTP dashboard for the project. The server pre-renders all');
+    out('Markdown under .project-manager/ to HTML at startup, then serves a polling');
+    out('UI that re-fetches /api/data every 1 second. JSON changes appear live;');
+    out('Markdown changes require a restart (or POST /api/rerender).');
+    out('');
+    out('Options:');
+    out('  --port N   TCP port to bind (default: 4173)');
+    out('  --host H   Interface to bind (default: 127.0.0.1)');
+    out('');
+    out('Endpoints served:');
+    out('  GET /             Dashboard HTML');
+    out('  GET /api/data     JSON snapshot of all artifacts + pre-rendered MD');
+    out('  GET /api/health   {ok, project, port, host, poll_interval_ms}');
+    out('  GET /api/rerender Force re-render of all Markdown');
+    out('  GET /raw/<path>   Serve a raw file from .project-manager/ (path-safe)');
+    out('');
+    out('Press Ctrl+C to stop the server.');
+    return `${lines.join('\n')}\n`;
+  }
   if (resource === 'plan') {
     out(`${usage.replace('<command> [args]', 'plan <subcommand> [args]')}`);
     out('');
@@ -312,6 +335,8 @@ function help(resource) {
   return `${lines.join('\n')}\n`;
 }
 
+
+
 function formatHuman(value) {
   return util.inspect(value, {
     colors: false,
@@ -323,7 +348,7 @@ function formatHuman(value) {
 
 function main(argv) {
   if (argv.includes('--help')) {
-    const resource = argv.find(value => value === 'init' || value === 'milestone' || value === 'plan');
+    const resource = argv.find(value => value === 'init' || value === 'milestone' || value === 'plan' || value === 'dashboard');
     process.stdout.write(help(resource));
     return 0;
   }
@@ -332,6 +357,11 @@ function main(argv) {
   const options = parsed.options;
   const resource = options._[0];
   if (!resource) throw new PMError('resource is required');
+
+  if (resource === 'dashboard') {
+    return runDashboard(argv, parsed, options);
+  }
+
   const store = new Store(parsed.project);
   let value;
 
@@ -364,11 +394,42 @@ function main(argv) {
   } else if (resource === 'init') {
     value = initScaffold(store, options);
   } else {
-    throw new PMError(`unknown command: ${resource} (expected: init, milestone, plan)`);
+    throw new PMError(`unknown command: ${resource} (expected: init, milestone, plan, dashboard)`);
   }
 
   process.stdout.write(`${parsed.json ? JSON.stringify(value, null, 2) : formatHuman(value)}\n`);
   return 0;
 }
-if (require.main === module) { try { process.exitCode = main(process.argv.slice(2)); } catch (error) { process.stderr.write(`error: ${error.message}\n`); process.exitCode = 1; } }
+function runDashboard(argv, parsed, options) {
+  const { spawn } = require('child_process');
+  const args = [path.join(__dirname, 'dashboard-server.js')];
+  if (parsed.project && parsed.project !== '.') args.push('--project', parsed.project);
+  if (options.port !== undefined) args.push('--port', String(options.port));
+  if (options.host !== undefined) args.push('--host', String(options.host));
+  const child = spawn(process.execPath, args, { stdio: 'inherit' });
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (code) => { if (!settled) { settled = true; resolve(code ?? 0); } };
+    child.on('exit', (code) => settle(code));
+    for (const sig of ['SIGINT', 'SIGTERM']) {
+      const handler = () => { if (!settled) { try { child.kill(sig); } catch (_) {} } };
+      process.on(sig, handler);
+    }
+  });
+}
+if (require.main === module) {
+  try {
+    const result = main(process.argv.slice(2));
+    if (result && typeof result.then === 'function') {
+      result.then((code) => { process.exitCode = code ?? 0; }, (error) => {
+        process.stderr.write(`error: ${error.message}\n`); process.exitCode = 1;
+      });
+    } else {
+      process.exitCode = result;
+    }
+  } catch (error) {
+    process.stderr.write(`error: ${error.message}\n`);
+    process.exitCode = 1;
+  }
+}
 module.exports = { PMError, Store, validateTimeline, validatePhase, validateTimestamp, main };
