@@ -61,6 +61,20 @@
     const $ = (id) => document.getElementById(id);
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmtPct = (n, d) => d ? Math.round(n * 100 / d) + '%' : '—';
+    const feedbackId = () => 'fb-' + Math.random().toString(36).slice(2, 9);
+    function copyBtn(text, label, tone = 'slate') {
+      const id = feedbackId();
+      const toneCls = tone === 'blue' ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+        : tone === 'amber' ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
+        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200';
+      return `<span class="inline-flex items-center gap-1.5">
+        <button type="button" data-copy="${esc(text)}" data-feedback="${id}"
+          class="copy-btn px-2 py-1 text-xs font-medium rounded border transition active:scale-95 ${toneCls}">
+          ${esc(label)}
+        </button>
+        <span id="${id}" class="text-xs text-emerald-600 opacity-0 transition-opacity duration-200 select-none">copied</span>
+      </span>`;
+    }
 
     function renderMarkdown(content) {
       return content || '<p class="text-slate-400 italic">empty</p>';
@@ -92,11 +106,18 @@
       return `<div class="grid gap-4">${wireDocs}${wires}</div>`;
     }
 
-    function phaseCard(phase) {
+    function phaseCard(phase, planName) {
       const tasks = Array.isArray(phase.tasks) ? phase.tasks : [];
       const done = tasks.filter(t => t.status === 'completed').length;
+      const phaseId = phase.phase_number ?? '';
+      const executePrompt = `Execute ${planName} plan, phase ${phaseId} using project-manager skill. Check previous phase, report first if any blocker`;
+      const auditPrompt = `Audit ${planName} plan, phase ${phaseId} using project-manager skill. Response me briefly`;
       return `<div class="min-w-72 flex-1 rounded-lg bg-slate-50 border border-slate-200 p-3">
-        <h4 class="font-semibold mb-1">${esc(phase.title || ('Phase ' + (phase.phase_number ?? '')))}</h4>
+        <h4 class="font-semibold mb-1">${esc(phase.title || ('Phase ' + phaseId))}</h4>
+        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+          ${copyBtn(executePrompt, 'Execute', 'blue')}
+          ${copyBtn(auditPrompt, 'Audit', 'amber')}
+        </div>
         <div class="flex items-center gap-2 text-xs text-slate-500 mb-2">
           <span class="px-1.5 py-0.5 rounded bg-white border">${esc(phase.status || 'todo')}</span>
           <span>${esc(phase.milestone_id || '')}</span>
@@ -130,13 +151,21 @@
       const summary = timeline
         ? `Milestones ${done}/${ms.length} (${fmtPct(done, ms.length)}) · WBS ${(timeline.value.wbs || []).length} · Risks ${(timeline.value.risk_register || []).length} · Changes ${(timeline.value.change_request_log || []).length}`
         : 'No milestone timeline yet. Run `project-manager milestone init` to create one.';
-      const groups_html = Object.entries(groups).map(([name, ps]) => `<details open class="mb-4 rounded-lg bg-white shadow-sm border border-slate-200 overflow-hidden">
-        <summary class="cursor-pointer px-4 py-3 font-semibold flex items-center justify-between">
-          <span>${esc(name)}</span>
-          <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">${ps.length} phase${ps.length === 1 ? '' : 's'}</span>
+      const groups_html = Object.entries(groups).map(([name, ps]) => {
+        const planExecutePrompt = `Execute ${name} plan using project-manager skill`;
+        return `<details open class="mb-4 rounded-lg bg-white shadow-sm border border-slate-200 overflow-hidden">
+        <summary class="cursor-pointer px-4 py-3 font-semibold flex items-center justify-between gap-3">
+          <span class="flex items-center gap-3 min-w-0">
+            <span class="truncate">${esc(name)}</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">${ps.length} phase${ps.length === 1 ? '' : 's'}</span>
+          </span>
+          <span class="flex items-center gap-2 shrink-0">
+            ${copyBtn(planExecutePrompt, 'Execute plan', 'blue')}
+          </span>
         </summary>
-        <div class="p-4 flex gap-3 overflow-x-auto scrollbar-thin">${ps.sort((a,b) => (a.phase_number ?? 0) - (b.phase_number ?? 0)).map(phaseCard).join('')}</div>
-      </details>`).join('');
+        <div class="p-4 flex gap-3 overflow-x-auto scrollbar-thin">${ps.sort((a,b) => (a.phase_number ?? 0) - (b.phase_number ?? 0)).map(p => phaseCard(p, name)).join('')}</div>
+      </details>`;
+      }).join('');
       return `<div class="mb-4 rounded-lg bg-white shadow-sm border border-slate-200 p-4">
         <div class="font-semibold mb-1">Timeline</div>
         <p class="text-sm text-slate-600">${esc(summary)}</p>
@@ -239,8 +268,44 @@
     function start() {
       buildTabs();
       $('autorefresh').addEventListener('change', (e) => { state.autorefresh = e.target.checked; });
+      document.body.addEventListener('click', handleCopyClick);
       poll();
       state.timer = setInterval(poll, POLL_MS);
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try { await navigator.clipboard.writeText(text); return true; } catch (_) {}
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    function handleCopyClick(event) {
+      const btn = event.target.closest('.copy-btn');
+      if (!btn) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const text = btn.getAttribute('data-copy') || '';
+      const fbId = btn.getAttribute('data-feedback');
+      copyText(text).then((ok) => {
+        const fb = fbId && document.getElementById(fbId);
+        if (!fb) return;
+        fb.textContent = ok ? 'copied' : 'failed';
+        fb.className = fb.className.replace(/text-emerald-600|text-rose-600/, '') + (ok ? ' text-emerald-600' : ' text-rose-600');
+        fb.style.opacity = '1';
+        clearTimeout(btn._fbTimer);
+        btn._fbTimer = setTimeout(() => { fb.style.opacity = '0'; }, 1400);
+      });
     }
     start();
   </script>
