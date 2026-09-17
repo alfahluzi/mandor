@@ -103,6 +103,21 @@ function required(options, keys) { for (const key of keys) if (options[key] === 
 function changeFrom(options, id) { required(options, ['summary', 'reason']); return { id, timestamp: now(), summary: options.summary, reason: options.reason, affected_ids: options.affected_id || [], decision: options.decision || 'requested', evidence: options.evidence ?? null }; }
 function editChange(item, options) { if (!['summary', 'reason', 'affected_id', 'decision', 'evidence'].some(key => options[key] !== undefined)) throw new PMError('at least one editable field is required'); if (options.summary !== undefined) item.summary = options.summary; if (options.reason !== undefined) item.reason = options.reason; if (options.affected_id !== undefined) item.affected_ids = options.affected_id; if (options.decision !== undefined) item.decision = options.decision; if (options.evidence !== undefined) item.evidence = options.evidence; validateChange(item); }
 
+function initScaffold(store, options) {
+  const created = [];
+  const targets = [{ path: store.root, label: '.project-manager' }, { path: store.plans, label: 'plans' }];
+  for (const target of targets) {
+    if (fs.existsSync(target.path)) {
+      if (!fs.lstatSync(target.path).isDirectory()) throw new PMError(`not a directory: ${target.path}`);
+      continue;
+    }
+    ensureDirectory(store.project, target.path);
+    created.push(target.label);
+  }
+  try { generate(store.project, { quiet: true }); } catch (error) { throw new PMError(`dashboard refresh failed: ${error.message}`); }
+  return { project: store.project, root: store.root, plans: store.plans, created: created.length ? created : 'already present' };
+}
+
 function mutateTimeline(store, options) {
   const file = store.timelinePath();
   if (options.action === 'init') { required(options, ['name', 'version']); validateName(options.name); if (fs.existsSync(file) && !options.force) throw new PMError('timeline exists; use --force'); ensureDirectory(store.project, store.plans); const document = { schema_version: '1.0', name: options.name, version: options.version, created_at: now(), updated_at: now(), next_ids: { source: 1, milestone: 1, wbs: 1, risk: 1, change: 1 }, approval: { status: 'requested', timestamp: now(), evidence: null }, source_trace: [], milestones: [], wbs: [], risk_register: [], change_request_log: [] }; validateTimeline(document); store.commit(file, document); store.refresh(); return document; }
@@ -188,22 +203,113 @@ function mutatePhaseContent(store, plan, options) { const number = options.phase
 const OPTION_KEYS = new Set(['name', 'version', 'force', 'status', 'evidence', 'location', 'claim', 'start', 'target', 'milestone_id', 'description', 'likelihood', 'impact', 'mitigation', 'owner', 'risk_status', 'summary', 'reason', 'affected_id', 'decision', 'phase', 'title', 'detail', 'task_id', 'message', 'index']);
 function parseArgs(argv) { let project = '.', json = false; const words = []; for (let i = 0; i < argv.length; i += 1) { const word = argv[i]; if (word === '--json') json = true; else if (word === '--project') { if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new PMError('--project requires a value'); project = argv[++i]; } else words.push(word); } const positional = []; const options = {}; for (let i = 0; i < words.length; i += 1) { const word = words[i]; if (!word.startsWith('--')) { positional.push(word); continue; } const key = word.slice(2).replace(/-/g, '_'); if (!OPTION_KEYS.has(key)) throw new PMError(`unknown option: ${word}`); if (key === 'force') { if (options.force) throw new PMError('duplicate option: --force'); options.force = true; continue; } if (key === 'affected_id') { if (!words[i + 1] || words[i + 1].startsWith('--')) throw new PMError(`${word} requires a value`); (options.affected_id ||= []).push(words[++i]); continue; } if (options[key] !== undefined) throw new PMError(`duplicate option: ${word}`); if (!words[i + 1] || words[i + 1].startsWith('--')) throw new PMError(`${word} requires a value`); options[key] = words[++i]; } for (const key of ['phase', 'index']) if (options[key] !== undefined) { if (!/^\d+$/.test(options[key])) throw new PMError(`${key} must be an integer`); options[key] = Number(options[key]); } options._ = positional; return { project, json, options }; }
 function help(resource) {
+  const lines = [];
+  const out = (text = '') => lines.push(text);
+  const usage = 'project-manager [--project PATH] [--json] <command> [args]';
   if (!resource) {
-    return 'Usage: project-manager [--project PATH] [--json] milestone|plan ...\n';
+    out(`${usage}`);
+    out('');
+    out('Manage the .project-manager/ artifact tree for a project. The CLI atomically');
+    out('validates JSON, regenerates .project-manager/pm.html on writes, and never');
+    out('touches managed JSON files directly — only via the subcommands below.');
+    out('');
+    out('Global options:');
+    out('  --project PATH   Target project directory (default: current directory)');
+    out('  --json           Emit machine-readable JSON instead of human format');
+    out('  --help [TOPIC]   Show this help, or help for: init, milestone, plan');
+    out('');
+    out('Commands:');
+    out('  init                            Create .project-manager/ scaffold (idempotent)');
+    out('  milestone [subcommand] [args]   Manage the milestone timeline');
+    out('  plan [subcommand] [args]        Manage a plan and its phase files');
+    out('');
+    out('Typical workflow:');
+    out('  1. project-manager init');
+    out('  2. project-manager milestone init --name K --version V');
+    out('  3. project-manager milestone add-milestone --name M1');
+    out('  4. project-manager milestone approve --status approved');
+    out('  5. project-manager plan init my-plan');
+    out('  6. project-manager plan add-phase my-plan --phase 1 --milestone-id milestone-001 --title "..."');
+    out('  7. project-manager plan add-task my-plan --phase 1 --title T --detail D');
+    out('');
+    out(`Run \`${usage.replace('<command> [args]', '<command> --help')}\` for command details.`);
+    return `${lines.join('\n')}\n`;
+  }
+  if (resource === 'init') {
+    out(`${usage.replace('<command> [args]', 'init')}`);
+    out('');
+    out('Create the .project-manager/ scaffold under --project (default cwd).');
+    out('Idempotent: reports "already present" when the scaffold exists.');
+    out('After init, run `milestone init` and `plan init <name>` to populate data.');
+    out('No options.');
+    return `${lines.join('\n')}\n`;
   }
   if (resource === 'milestone') {
-    return 'Usage: project-manager milestone [get|list|init|update-metadata|approve|'
-      + 'add/update/delete-source ID|add/update/delete-milestone ID|'
-      + 'add/update/delete-wbs ID|add/update/delete-risk ID|'
-      + 'add/update/delete-change ID] [options]\n';
+    out(`${usage.replace('<command> [args]', 'milestone <subcommand> [args]')}`);
+    out('');
+    out('Manage the single milestone timeline at .project-manager/plans/milestone-timeline.json.');
+    out('Subcommands:');
+    out('  get                                       Print the full timeline document');
+    out('  list                                      Print sources, milestones, WBS, risks, changes');
+    out('  init --name K --version V [--force]       Create empty timeline (overwrite requires --force)');
+    out('  update-metadata --name K | --version V    Update timeline name and/or version');
+    out('  approve --status S [--evidence TEXT]      Set approval status: requested|approved|rejected');
+    out('  add-source    --location --claim          Append source trace entry');
+    out('  update-source SOURCE_ID [--location] [--claim]');
+    out('  delete-source SOURCE_ID');
+    out('  add-milestone --name [--status S] [--start ISO] [--target ISO]');
+    out('  update-milestone MILESTONE_ID [--name] [--status S] [--start ISO] [--target ISO]');
+    out('  delete-milestone MILESTONE_ID            Fails if any phase or WBS still references it');
+    out('  add-wbs        --milestone-id ID --name');
+    out('  update-wbs WBS_ID [--milestone-id ID] [--name]');
+    out('  delete-wbs WBS_ID');
+    out('  add-risk       --description [--likelihood L] [--impact I] [--mitigation M] [--owner O] [--risk-status S]');
+    out('  update-risk RISK_ID [--description] [--likelihood] [--impact] [--mitigation] [--owner] [--risk-status]');
+    out('  delete-risk RISK_ID');
+    out('  add-change     --summary --reason [--affected-id ID ...] [--decision S] [--evidence TEXT]');
+    out('  update-change CHANGE_ID [--summary] [--reason] [--affected-id ...] [--decision] [--evidence]');
+    out('  delete-change CHANGE_ID');
+    out('');
+    out('Notes:');
+    out('  - Milestone IDs are auto-generated milestone-NNN on add.');
+    out('  - Run `milestone approve --status approved` before adding plan phases.');
+    return `${lines.join('\n')}\n`;
   }
-  return 'Usage: project-manager plan list|PLAN|summary PLAN [--phase N]|init PLAN|'
-    + 'add/update/delete-phase PLAN [--phase N]|'
-    + 'add/update/delete-source PLAN ITEM_ID --phase N|'
-    + 'add/update/delete-task PLAN ITEM_ID --phase N|'
-    + 'set-task-status PLAN ITEM_ID --phase N|'
-    + 'add/update/delete-progress PLAN ITEM_ID --phase N|'
-    + 'add/update/delete-change PLAN ITEM_ID --phase N [options]\n';
+  if (resource === 'plan') {
+    out(`${usage.replace('<command> [args]', 'plan <subcommand> [args]')}`);
+    out('');
+    out('Manage plans and phase files under .project-manager/plans/<plan>/.');
+    out('Subcommands:');
+    out('  list                                       List all plans in the project');
+    out('  PLAN                                       Print summary for PLAN');
+    out('  summary PLAN [--phase N]                   Print plan summary, or single phase when --phase given');
+    out('  init PLAN                                  Create plan directory (idempotent)');
+    out('  add-phase PLAN --phase N --milestone-id ID --title [--status S]   Requires approved timeline');
+    out('  update-phase PLAN --phase N [--milestone-id ID] [--title] [--status S]');
+    out('  delete-phase PLAN --phase N [--force]       Fails non-empty phase without --force');
+    out('  add-source    PLAN --phase N --milestone-id ID --location --claim');
+    out('  update-source PLAN --phase N SOURCE_ID [--milestone-id] [--location] [--claim]');
+    out('  delete-source PLAN --phase N SOURCE_ID');
+    out('  add-task      PLAN --phase N --title --detail [--status S]');
+    out('  update-task   PLAN --phase N TASK_ID [--title] [--detail]');
+    out('  delete-task   PLAN --phase N TASK_ID');
+    out('  set-task-status PLAN --phase N TASK_ID --status S');
+    out('  add-progress  PLAN --phase N TASK_ID --message');
+    out('  update-progress PLAN --phase N TASK_ID --index I --message');
+    out('  delete-progress PLAN --phase N TASK_ID --index I');
+    out('  add-change    PLAN --phase N --summary --reason [--affected-id ID ...] [--decision] [--evidence]');
+    out('  update-change PLAN --phase N CHANGE_ID [--summary] [--reason] [--affected-id ...] [--decision] [--evidence]');
+    out('  delete-change PLAN --phase N CHANGE_ID');
+    out('');
+    out('Notes:');
+    out('  - Plan names: lowercase kebab-case (^[a-z0-9]+(-[a-z0-9]+)*$).');
+    out('  - Statuses: todo | in_progress | completed | failed.');
+    out('  - Progress entries are append-only by timestamp; use --index to edit/delete.');
+    return `${lines.join('\n')}\n`;
+  }
+  out(`Unknown help topic: ${resource}`);
+  out(`Run \`${usage}\` for the command list.`);
+  return `${lines.join('\n')}\n`;
 }
 
 function formatHuman(value) {
@@ -217,7 +323,7 @@ function formatHuman(value) {
 
 function main(argv) {
   if (argv.includes('--help')) {
-    const resource = argv.find(value => value === 'milestone' || value === 'plan');
+    const resource = argv.find(value => value === 'init' || value === 'milestone' || value === 'plan');
     process.stdout.write(help(resource));
     return 0;
   }
@@ -255,8 +361,10 @@ function main(argv) {
       options.plan = token;
     }
     value = mutatePlan(store, options);
+  } else if (resource === 'init') {
+    value = initScaffold(store, options);
   } else {
-    throw new PMError('resource must be milestone or plan');
+    throw new PMError(`unknown command: ${resource} (expected: init, milestone, plan)`);
   }
 
   process.stdout.write(`${parsed.json ? JSON.stringify(value, null, 2) : formatHuman(value)}\n`);

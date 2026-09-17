@@ -31,7 +31,27 @@ and unrelated content. Use ISO 8601 timestamps, lowercase kebab-case plan names,
 fixed `BRD.md`/`PRD.md`, and statuses `todo`, `in_progress`, `completed`, `failed`.
 Approval requires explicit user approval. Stop at lifecycle gates. CLI mutations
 atomically validate JSON and regenerate `.project-manager/pm.html`; reads do not
-mutate. Manual dashboard generation:
+mutate.
+
+## Setup
+
+Add the skill's wrapper to PATH so every command below can be invoked as a bare
+`project-manager ...` instead of a full path to `scripts/project-manager.js`:
+
+```sh
+export PATH="<skill-dir>/bin:$PATH"
+```
+
+`<skill-dir>` is the directory containing this `SKILL.md` (after `install.sh`,
+typically `~/.config/opencode/skills/project-manager`). The wrapper is a shell
+script that execs the bundled Node CLI; verify with `which project-manager` and
+`project-manager --help`. Without PATH setup, call the wrapper directly:
+
+```sh
+<skill-dir>/bin/project-manager --help
+```
+
+Manual dashboard generation:
 
 ```sh
 node <skill-dir>/scripts/generate-pm-dashboard.js <project-path>
