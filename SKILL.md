@@ -17,8 +17,8 @@ filesystem operations.
 
 ## Routes
 
-- Discovery: [discovery-presales](prompts/discovery-presales.md)
-- Existing project: [discover-existing-project](prompts/discover-existing-project.md)
+- New Project Discovery: [discover-greenfield-project](prompts/discover-greenfield-project.md)
+- Existing project Discovery: [discover-existing-project](prompts/discover-existing-project.md)
 - Requirements: [build-requirement-docs](prompts/build-requirement-docs.md)
 - Milestones: [build-project-plan](prompts/build-project-plan.md)
 - Phases: [build-phase-plan](prompts/build-phase-plan.md)
