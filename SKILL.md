@@ -44,7 +44,7 @@ own approval boundary; the router never auto-advances.
 | File | Role | Purpose | Output |
 |---|---|---|---|
 | [`build-milestone.md`](prompts/plans/build-milestone.md) | milestone | Inspect approved requirements, build timeline + WBS + risk register via CLI. Approval gate. | `plans/milestone-timeline.json` |
-| [`build-phase-plan.md`](prompts/plans/build-phase-plan.md) | phase | Detailed phase plan with tasks, source traces, change requests via CLI. | `plans/<plan>/phase_N.json` |
+| [`build-feature-plan.md`](prompts/plans/build-feature-plan.md) | phase | Detailed phase plan with tasks, source traces, change requests via CLI. | `plans/<plan>/phase_N.json` |
 | [`execute-plan.md`](prompts/plans/execute-plan.md) | execution | Sequential plan execution with status, progress, change log via CLI. | executed / skipped / failed IDs |
 
 ### Lifecycle gates
