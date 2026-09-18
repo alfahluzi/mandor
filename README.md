@@ -93,7 +93,7 @@ phase columns, and task rows. Other supported JSON is shown in a fallback sectio
 mandor/
   SKILL.md  README.md  LICENSE  install.sh
   prompts/*.md
-  references/artifact-contracts.md
+  examples/sample-project/.mandor/
   bin/mandor
   scripts/mandor.js
   scripts/generate-pm-dashboard.js

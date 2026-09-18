@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "name": "toko-online",
+  "version": "0.1.0",
+  "created_at": "2026-09-01T08:00:00Z",
+  "updated_at": "2026-09-18T08:00:00Z",
+  "next_ids": { "source": 4, "milestone": 4, "wbs": 3, "risk": 3, "change": 3 },
+  "approval": { "status": "approved", "timestamp": "2026-09-05T09:00:00Z", "evidence": "approved by PM after discovery synthesis" },
+  "source_trace": [
+    { "id": "source-001", "location": "docs/discovery.md#client-brief", "claim": "Toko Online is a B2C marketplace for SMEs in Indonesia" },
+    { "id": "source-002", "location": "interviews/buyer-01.md", "claim": "Buyers want COD and free returns within 7 days" },
+    { "id": "source-003", "location": "interviews/seller-02.md", "claim": "Sellers need bulk upload via CSV" }
+  ],
+  "milestones": [
+    { "id": "milestone-001", "name": "Discovery", "status": "completed", "start_timestamp": "2026-09-01T08:00:00Z", "target_timestamp": "2026-09-07T17:00:00Z" },
+    { "id": "milestone-002", "name": "MVP Build", "status": "in_progress", "start_timestamp": "2026-09-08T08:00:00Z", "target_timestamp": "2026-10-15T17:00:00Z" },
+    { "id": "milestone-003", "name": "Public Launch", "status": "todo", "start_timestamp": "2026-10-16T08:00:00Z", "target_timestamp": "2026-11-30T17:00:00Z" }
+  ],
+  "wbs": [
+    { "id": "wbs-001", "milestone_id": "milestone-002", "name": "Auth & user profile" },
+    { "id": "wbs-002", "milestone_id": "milestone-002", "name": "Product catalog & search" }
+  ],
+  "risk_register": [
+    { "id": "risk-001", "description": "COD fraud rate above 5% threshold", "likelihood": "medium", "impact": "high", "mitigation": "limit COD to verified buyers and require pre-auth hold", "owner": "risk-lead", "status": "open" },
+    { "id": "risk-002", "description": "Seller CSV upload edge cases corrupt DB", "likelihood": "unknown", "impact": "unknown", "mitigation": "not yet mitigated", "owner": "unassigned", "status": "open" }
+  ],
+  "change_request_log": [
+    { "id": "change-001", "timestamp": "2026-09-10T10:00:00Z", "summary": "Re-scope MVP from web-first to web+mobile-pwa", "reason": "Stakeholder review revealed mobile parity is required for launch", "affected_ids": ["milestone-002", "wbs-001"], "decision": "approved", "evidence": "PM sign-off in sync on 2026-09-10" },
+    { "id": "change-002", "timestamp": "2026-09-12T14:00:00Z", "summary": "Defer loyalty program from MVP to v2", "reason": "Engineering capacity allocated to search quality", "affected_ids": ["milestone-002"], "decision": "approved", "evidence": null }
+  ]
+}

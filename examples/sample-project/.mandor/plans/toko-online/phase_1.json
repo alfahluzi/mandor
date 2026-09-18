@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "plan_name": "toko-online",
+  "phase_number": 1,
+  "milestone_id": "milestone-002",
+  "title": "Auth & user profile",
+  "status": "in_progress",
+  "created_at": "2026-09-08T08:00:00Z",
+  "updated_at": "2026-09-18T08:00:00Z",
+  "next_ids": { "source": 3, "task": 4, "change": 2 },
+  "source_trace": [
+    { "id": "source-001", "milestone_id": "milestone-002", "location": "specs/auth.md", "claim": "Email+password auth with optional OAuth (Google)" },
+    { "id": "source-002", "milestone_id": "milestone-002", "location": "specs/profile.md", "claim": "Profile must support buyer and seller personas in one account" }
+  ],
+  "tasks": [
+    { "id": "task-001", "title": "Schema: users + sessions tables", "detail": "Postgres DDL for users, sessions, oauth_tokens; include migration script.", "status": "completed", "progress": [{ "timestamp": "2026-09-09T11:00:00Z", "message": "DDL merged; index on email verified" }] },
+    { "id": "task-002", "title": "REST: signup + login endpoints", "detail": "POST /auth/signup, POST /auth/login; rate-limit 10/min/IP.", "status": "in_progress", "progress": [{ "timestamp": "2026-09-10T09:00:00Z", "message": "signup endpoint done" }, { "timestamp": "2026-09-15T16:00:00Z", "message": "login endpoint merged; rate-limit pending" }] },
+    { "id": "task-003", "title": "Google OAuth integration", "detail": "Wire Google Identity Services; map email to existing users.", "status": "todo", "progress": [] }
+  ],
+  "change_request_log": [
+    { "id": "change-001", "timestamp": "2026-09-11T09:00:00Z", "summary": "Add password-reset email flow", "reason": "Forgot-password was missing from MVP spec", "affected_ids": ["task-001"], "decision": "requested", "evidence": null }
+  ]
+}

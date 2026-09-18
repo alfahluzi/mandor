@@ -1,10 +1,12 @@
-# Greenfield Discovery and Presales
+# Greenfield Discovery
 
 ## Entry criteria
 
-Use for a new product, client intake, presales discovery, or a requested NDA
-draft. Confirm `<project-path>` and whether the project is greenfield. Do not use
-for an existing repository; route that request to `discover-existing-project.md`.
+Use for a new product, client intake, presales discovery.
+Confirm `<project-path>` and whether the project is greenfield. Do not use
+for an existing repository; route that request to `-existing-project.md`.
+Inherits the twelve-section `client-brief.md` schema from
+`client-discovery.md` and must fill every section.
 
 ## Process
 
@@ -17,11 +19,10 @@ for an existing repository; route that request to `discover-existing-project.md`
    sensitive information, competitors or references, existing-system integrations,
    technical constraints, and stack preferences. Follow up on consequential gaps;
    do not send one giant questionnaire or assume missing answers.
-3. Write `client-discovery/client-brief.md`. Label every statement as verified
-   fact, assumption, decision, or open question, and record its source.
-4. Create `client-discovery/nda.md` only when requested or justified. Mark it
-   `DRAFT - REQUIRES LEGAL REVIEW`; avoid legal conclusions or validity claims.
-5. Do not create BRD, PRD, plans, user stories, or wireframes in this route.
+3. Write `<project-path>/.mandor/client-discovery/client-brief.md` under the
+   exact twelve-section schema owned by `client-discovery.md`. Label every
+   statement as `[fact|assumption|decision|open]` with a source pointer.
+4. Do not create BRD, PRD, plans, user stories, or wireframes in this route.
 
 ## Output
 
