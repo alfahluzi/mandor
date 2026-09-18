@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-REPO_URL=${REPO_URL:-https://github.com/alfahluzi/project-manager.git}
+REPO_URL=${REPO_URL:-https://github.com/alfahluzi/mandor.git}
 REF=${REF:-main}
 SKILL_SUBDIR=${SKILL_SUBDIR:-.}
 force=false
@@ -89,14 +89,14 @@ source="$archive_root/$SKILL_SUBDIR"
   exit 1
 }
 
-target="$destination/project-manager"
+target="$destination/mandor"
 check_no_symlinks "$destination"
 check_no_symlinks "$target"
 if [ -e "$target" ] && [ "$force" != true ]; then
   echo "Refusing overwrite: $target (use --force)." >&2
   exit 1
 fi
-staged="$tmp/project-manager"
+staged="$tmp/mandor"
 mkdir "$staged"
 cp -R "$source"/. "$staged"/
 [ -f "$staged/SKILL.md" ] || { echo "Validated source could not be staged." >&2; exit 1; }
@@ -111,5 +111,5 @@ if [ -e "$target" ]; then
   check_no_symlinks "$target"
 fi
 mv "$staged" "$target"
-chmod +x "$target/bin/project-manager" "$target/scripts"/*.js 2>/dev/null || true
-echo "Installed project-manager at $target"
+chmod +x "$target/bin/mandor" "$target/scripts"/*.js 2>/dev/null || true
+echo "Installed mandor at $target"

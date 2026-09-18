@@ -9,7 +9,7 @@ requested as a separate, non-lifecycle request.
 ## Process
 
 1. Inspect source, configuration, documentation, package metadata, migrations,
-   deployment definitions, and existing `.project-manager/` artifacts.
+   deployment definitions, and existing `.mandor/` artifacts.
 2. Record only observed behavior and trace each finding to a file, section, or
    command output. Separate facts, assumptions, decisions, and open questions.
 3. Identify completed milestones from evidence. Do not infer completion from

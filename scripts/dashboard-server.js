@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 
-const ARTIFACT_DIR = '.project-manager';
+const ARTIFACT_DIR = '.mandor';
 const TEMPLATE_HTML = path.join(__dirname, '..', 'templates', 'dashboard.html');
 const DEFAULT_PORT = 4173;
 const POLL_INTERVAL_MS = 1000;
@@ -299,7 +299,7 @@ function main(argv) {
       // host passed via closure below
       process.env.PM_DASHBOARD_HOST = argv[++i];
     } else if (word === '--help' || word === '-h') {
-      process.stdout.write('Usage: project-manager dashboard [--project PATH] [--port N] [--host H]\n');
+      process.stdout.write('Usage: mandor dashboard [--project PATH] [--port N] [--host H]\n');
       return 0;
     } else {
       throw new Error(`unknown option: ${word}`);

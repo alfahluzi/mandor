@@ -8,7 +8,7 @@ the discovery or existing-project evidence source. Do not assume approval.
 
 ## Process
 
-1. Resolve and inspect `<project-path>/.project-manager/` plus cited source
+1. Resolve and inspect `<project-path>/.mandor/` plus cited source
    material. Build a source trace before making claims.
 2. Decide which artifacts are needed: `BRD.md`, `PRD.md`, user-story files, and
    HTML wireframes only when requested and justified.
@@ -30,7 +30,7 @@ opts out.
 
 ### File layout
 
-- Directory: `<project>/.project-manager/requirements/user-stories/`
+- Directory: `<project>/.mandor/requirements/user-stories/`
 - Filename: kebab-case from the story slug, `.md` extension.
   Example: `password-reset-by-email.md`.
 - Each file is one story. Do not bundle multiple stories in one Markdown file.
@@ -41,7 +41,7 @@ opts out.
 
 - ID format: `US-NNN` where `NNN` is zero-padded, three digits, globally unique
   inside the project. Track the next ID in
-  `<project>/.project-manager/requirements/user-stories/_index.md` as a plain
+  `<project>/.mandor/requirements/user-stories/_index.md` as a plain
   text list under `## next_id: US-001` etc. Increment before writing.
 - Status values: `draft`, `approved`, `rejected`, `superseded`.
 - Priority values: `must`, `should`, `could`, `won't` (MoSCoW).
@@ -78,7 +78,7 @@ per screen. Skip if the user explicitly opts out or the feature is headless.
 
 ### File layout
 
-- Directory: `<project>/.project-manager/requirements/wireframes/`
+- Directory: `<project>/.mandor/requirements/wireframes/`
 - Filename: kebab-case from the screen slug, `.html` extension.
   Example: `password-reset-form.html`, `dashboard-shell.html`.
 - One file per screen. Multiple variants of the same screen are allowed
@@ -158,7 +158,7 @@ Example:
 - After writing or editing any wireframe or user-story file, regenerate the
   dashboard so the new files appear:
   ```sh
-  project-manager dashboard --port 4173
+  mandor dashboard --port 4173
   # or, for a one-shot snapshot:
   node <skill-dir>/scripts/generate-pm-dashboard.js <project-path>
   ```

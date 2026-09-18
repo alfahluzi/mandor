@@ -10,8 +10,8 @@ for an existing repository; route that request to `discover-existing-project.md`
 
 1. Resolve `<project-path>`. If the user explicitly requests greenfield project
    creation and it does not exist, create the project directory and the
-   `.project-manager/` artifact directories. Otherwise create or use only
-   `<project-path>/.project-manager/`; inspect existing discovery files.
+   `.mandor/` artifact directories. Otherwise create or use only
+   `<project-path>/.mandor/`; inspect existing discovery files.
 2. Interview the user iteratively. Ask focused questions about the actual problem,
    target users, business goals, rough budget, expected timeline, success measures,
    sensitive information, competitors or references, existing-system integrations,

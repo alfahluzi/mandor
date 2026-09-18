@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const TEMPLATE = path.join(__dirname, '..', 'templates', 'pm.html');
-const ARTIFACT_DIR = '.project-manager';
+const ARTIFACT_DIR = '.mandor';
 
 function rejectSymlink(file) {
   if (fs.lstatSync(file).isSymbolicLink()) {

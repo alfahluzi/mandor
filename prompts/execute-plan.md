@@ -1,7 +1,7 @@
 # Sequential Plan Execution
 
 Use only with approved milestone and detailed phase plans. Read timeline and phase
-JSON through `<skill-dir>/bin/project-manager`; use normal filesystem operations
+JSON through `<skill-dir>/bin/mandor`; use normal filesystem operations
 for Markdown and source. Managed JSON CRUD uses the CLI exclusively.
 
 ## Process

@@ -1,6 +1,6 @@
 # Build Phase Plan
 
-Use `<skill-dir>/bin/project-manager` for all timeline and phase JSON reads,
+Use `<skill-dir>/bin/mandor` for all timeline and phase JSON reads,
 lists, and mutations. Use normal filesystem operations only for Markdown.
 
 ## Process
@@ -13,4 +13,4 @@ lists, and mutations. Use normal filesystem operations only for Markdown.
 
 Phase number is the ID and filename number. No phase ID, approvals, dependencies,
 acceptance criteria, or completion markers exist. The CLI validates, atomically
-writes, and regenerates `.project-manager/pm.html`.
+writes, and regenerates `.mandor/pm.html`.

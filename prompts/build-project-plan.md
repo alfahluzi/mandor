@@ -1,6 +1,6 @@
 # Build Project Plan
 
-Use `<skill-dir>/bin/project-manager` for all timeline JSON reads, lists, and
+Use `<skill-dir>/bin/mandor` for all timeline JSON reads, lists, and
 mutations. Use normal filesystem operations only for Markdown.
 
 ## Process
@@ -15,4 +15,4 @@ mutations. Use normal filesystem operations only for Markdown.
 ## Output
 
 Return CLI JSON output, changed IDs, evidence locations, and approval questions.
-The CLI validates, atomically writes, and regenerates `.project-manager/pm.html`.
+The CLI validates, atomically writes, and regenerates `.mandor/pm.html`.

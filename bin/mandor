@@ -1,4 +1,4 @@
 #!/bin/sh
 set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../scripts" && pwd)
-exec node "$SCRIPT_DIR/project-manager.js" "$@"
+exec node "$SCRIPT_DIR/mandor.js" "$@"

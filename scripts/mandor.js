@@ -87,7 +87,7 @@ function atomicWrite(root, file, value) {
 function readJson(file) { let value; try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { throw new PMError(`invalid JSON: ${file}: ${error.message}`); } return value; }
 
 class Store {
-  constructor(project) { this.project = path.resolve(project || '.'); if (!fs.existsSync(this.project)) fs.mkdirSync(this.project, { recursive: true }); ensureDirectory(this.project, this.project); this.root = ensurePathSafe(this.project, path.join(this.project, '.project-manager')); this.plans = path.join(this.root, 'plans'); }
+  constructor(project) { this.project = path.resolve(project || '.'); if (!fs.existsSync(this.project)) fs.mkdirSync(this.project, { recursive: true }); ensureDirectory(this.project, this.project); this.root = ensurePathSafe(this.project, path.join(this.project, '.mandor')); this.plans = path.join(this.root, 'plans'); }
   timelinePath() { return path.join(this.plans, 'milestone-timeline.json'); }
   timeline() { const file = this.timelinePath(); if (!fs.existsSync(file)) throw new PMError('milestone timeline does not exist; run milestone init'); ensurePathSafe(this.project, file); const document = readJson(file); validateTimeline(document); return document; }
   phasePath(plan, number) { validateName(plan); integer(number, 'phase number'); return ensurePathSafe(this.project, path.join(this.plans, plan, `phase_${number}.json`)); }
@@ -105,7 +105,7 @@ function editChange(item, options) { if (!['summary', 'reason', 'affected_id', '
 
 function initScaffold(store, options) {
   const created = [];
-  const targets = [{ path: store.root, label: '.project-manager' }, { path: store.plans, label: 'plans' }];
+  const targets = [{ path: store.root, label: '.mandor' }, { path: store.plans, label: 'plans' }];
   for (const target of targets) {
     if (fs.existsSync(target.path)) {
       if (!fs.lstatSync(target.path).isDirectory()) throw new PMError(`not a directory: ${target.path}`);
@@ -205,12 +205,12 @@ function parseArgs(argv) { let project = '.', json = false; const words = []; fo
 function help(resource) {
   const lines = [];
   const out = (text = '') => lines.push(text);
-  const usage = 'project-manager [--project PATH] [--json] <command> [args]';
+  const usage = 'mandor [--project PATH] [--json] <command> [args]';
   if (!resource) {
     out(`${usage}`);
     out('');
-    out('Manage the .project-manager/ artifact tree for a project. The CLI atomically');
-    out('validates JSON, regenerates .project-manager/pm.html on writes, and never');
+    out('Manage the .mandor/ artifact tree for a project. The CLI atomically');
+    out('validates JSON, regenerates .mandor/pm.html on writes, and never');
     out('touches managed JSON files directly — only via the subcommands below.');
     out('');
     out('Global options:');
@@ -219,19 +219,19 @@ function help(resource) {
     out('  --help [TOPIC]   Show this help, or help for: init, milestone, plan, dashboard');
     out('');
     out('Commands:');
-    out('  init                            Create .project-manager/ scaffold (idempotent)');
+    out('  init                            Create .mandor/ scaffold (idempotent)');
     out('  milestone [subcommand] [args]   Manage the milestone timeline');
     out('  plan [subcommand] [args]        Manage a plan and its phase files');
     out('  dashboard [--port N]            Start live HTTP dashboard (polls /api/data every 1s)');
     out('');
     out('Typical workflow:');
-    out('  1. project-manager init');
-    out('  2. project-manager milestone init --name K --version V');
-    out('  3. project-manager milestone add-milestone --name M1');
-    out('  4. project-manager milestone approve --status approved');
-    out('  5. project-manager plan init my-plan');
-    out('  6. project-manager plan add-phase my-plan --phase 1 --milestone-id milestone-001 --title "..."');
-    out('  7. project-manager plan add-task my-plan --phase 1 --title T --detail D');
+    out('  1. mandor init');
+    out('  2. mandor milestone init --name K --version V');
+    out('  3. mandor milestone add-milestone --name M1');
+    out('  4. mandor milestone approve --status approved');
+    out('  5. mandor plan init my-plan');
+    out('  6. mandor plan add-phase my-plan --phase 1 --milestone-id milestone-001 --title "..."');
+    out('  7. mandor plan add-task my-plan --phase 1 --title T --detail D');
     out('');
     out(`Run \`${usage.replace('<command> [args]', '<command> --help')}\` for command details.`);
     return `${lines.join('\n')}\n`;
@@ -239,7 +239,7 @@ function help(resource) {
   if (resource === 'init') {
     out(`${usage.replace('<command> [args]', 'init')}`);
     out('');
-    out('Create the .project-manager/ scaffold under --project (default cwd).');
+    out('Create the .mandor/ scaffold under --project (default cwd).');
     out('Idempotent: reports "already present" when the scaffold exists.');
     out('After init, run `milestone init` and `plan init <name>` to populate data.');
     out('No options.');
@@ -248,7 +248,7 @@ function help(resource) {
   if (resource === 'milestone') {
     out(`${usage.replace('<command> [args]', 'milestone <subcommand> [args]')}`);
     out('');
-    out('Manage the single milestone timeline at .project-manager/plans/milestone-timeline.json.');
+    out('Manage the single milestone timeline at .mandor/plans/milestone-timeline.json.');
     out('Subcommands:');
     out('  get                                       Print the full timeline document');
     out('  list                                      Print sources, milestones, WBS, risks, changes');
@@ -280,7 +280,7 @@ function help(resource) {
     out(`${usage.replace('<command> [args]', 'dashboard [--port N] [--host H]')}`);
     out('');
     out('Start a live HTTP dashboard for the project. The server pre-renders all');
-    out('Markdown under .project-manager/ to HTML at startup, then serves a polling');
+    out('Markdown under .mandor/ to HTML at startup, then serves a polling');
     out('UI that re-fetches /api/data every 1 second. JSON changes appear live;');
     out('Markdown changes require a restart (or POST /api/rerender).');
     out('');
@@ -293,7 +293,7 @@ function help(resource) {
     out('  GET /api/data     JSON snapshot of all artifacts + pre-rendered MD');
     out('  GET /api/health   {ok, project, port, host, poll_interval_ms}');
     out('  GET /api/rerender Force re-render of all Markdown');
-    out('  GET /raw/<path>   Serve a raw file from .project-manager/ (path-safe)');
+    out('  GET /raw/<path>   Serve a raw file from .mandor/ (path-safe)');
     out('');
     out('Press Ctrl+C to stop the server.');
     return `${lines.join('\n')}\n`;
@@ -301,7 +301,7 @@ function help(resource) {
   if (resource === 'plan') {
     out(`${usage.replace('<command> [args]', 'plan <subcommand> [args]')}`);
     out('');
-    out('Manage plans and phase files under .project-manager/plans/<plan>/.');
+    out('Manage plans and phase files under .mandor/plans/<plan>/.');
     out('Subcommands:');
     out('  list                                       List all plans in the project');
     out('  PLAN                                       Print summary for PLAN');

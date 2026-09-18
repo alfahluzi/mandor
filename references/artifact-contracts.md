@@ -1,6 +1,6 @@
 # Artifact Contracts
 
-Managed JSON CRUD uses `<skill-dir>/bin/project-manager` exclusively. CLI reads
+Managed JSON CRUD uses `<skill-dir>/bin/mandor` exclusively. CLI reads
 validate complete documents before output. Markdown remains ordinary filesystem
 content. Plan names are lowercase kebab-case. All timestamps are ISO 8601 with
 timezone; generated timestamps use UTC second precision.
