@@ -23,11 +23,74 @@ function safeJoin(root, relative) {
   return absolute;
 }
 
+function isProjectDir(candidate) {
+  try {
+    if (fs.lstatSync(candidate).isSymbolicLink()) return false;
+    if (!fs.statSync(candidate).isDirectory()) return false;
+    const art = path.join(candidate, '.mandor');
+    if (!fs.existsSync(art)) return false;
+    if (fs.lstatSync(art).isSymbolicLink()) return false;
+    return fs.statSync(art).isDirectory();
+  } catch (_) {
+    return false;
+  }
+}
+
+function scanProjects(defaultProject) {
+  const seen = new Set();
+  const projects = [];
+  const add = (raw) => {
+    const absolute = path.resolve(raw);
+    if (seen.has(absolute)) return;
+    if (!isProjectDir(absolute)) return;
+    seen.add(absolute);
+    projects.push({ path: absolute, name: path.basename(absolute) || absolute });
+  };
+  add(defaultProject);
+  const envRoots = (process.env.MANDOR_PROJECTS_ROOTS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  for (const root of envRoots) {
+    if (!isProjectDir(root)) continue;
+    try {
+      for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        add(path.join(root, entry.name));
+      }
+    } catch (_) {}
+  }
+  try {
+    const parent = path.dirname(path.resolve(defaultProject));
+    if (isProjectDir(parent)) {
+      for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        add(path.join(parent, entry.name));
+      }
+    }
+  } catch (_) {}
+  projects.sort((a, b) => a.name.localeCompare(b.name));
+  return projects;
+}
+
+function resolveRequestedProject(defaultProject, requested) {
+  if (!requested) return { project: defaultProject, requested: null };
+  const absolute = path.resolve(requested);
+  if (!isProjectDir(absolute)) {
+    const error = new Error(`not a mandor project: ${absolute}`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return { project: absolute, requested };
+}
+
 function serve({ project, port, host = '127.0.0.1' }) {
   const root = artifactRoot(project);
   fs.mkdirSync(root, { recursive: true });
   const initial = readArtifacts(project);
   const templateHtml = fs.readFileSync(TEMPLATE_HTML, 'utf8');
+  const projects = scanProjects(project);
+  const defaultProject = project;
 
   const server = http.createServer((req, res) => {
     try {
@@ -40,12 +103,29 @@ function serve({ project, port, host = '127.0.0.1' }) {
       if (url.pathname === '/api/health') {
         return sendJson(res, 200, { ok: true, project, port, host, poll_interval_ms: POLL_INTERVAL_MS });
       }
+      if (url.pathname === '/api/projects') {
+        return sendJson(res, 200, { default: defaultProject, projects });
+      }
       if (url.pathname === '/api/data') {
+        const requested = url.searchParams.get('project');
+        let active = defaultProject;
+        let requestedProject = null;
+        try {
+          const resolved = resolveRequestedProject(defaultProject, requested);
+          active = resolved.project;
+          requestedProject = resolved.requested;
+        } catch (error) {
+          if (error.statusCode) return send(res, error.statusCode, 'text/plain', error.message);
+          throw error;
+        }
+        const activeRoot = artifactRoot(active);
         return sendJson(res, 200, {
-          ...readArtifacts(project),
+          ...readArtifacts(active),
           meta: {
-            project,
-            root,
+            project: active,
+            default_project: defaultProject,
+            requested_project: requestedProject,
+            root: activeRoot,
             generated_at: new Date().toISOString(),
             poll_interval_ms: POLL_INTERVAL_MS,
             mode: 'live'
@@ -53,8 +133,17 @@ function serve({ project, port, host = '127.0.0.1' }) {
         });
       }
       if (url.pathname.startsWith('/raw/')) {
+        const requested = url.searchParams.get('project');
+        let active = defaultProject;
+        try {
+          active = resolveRequestedProject(defaultProject, requested).project;
+        } catch (error) {
+          if (error.statusCode) return send(res, error.statusCode, 'text/plain', error.message);
+          throw error;
+        }
+        const activeRoot = artifactRoot(active);
         const relative = decodeURIComponent(url.pathname.slice('/raw/'.length));
-        const absolute = safeJoin(root, relative);
+        const absolute = safeJoin(activeRoot, relative);
         if (!absolute || !fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
           return send(res, 404, 'text/plain', 'not found');
         }
@@ -150,4 +239,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { serve, readArtifacts, main, DEFAULT_PORT };
+module.exports = { serve, readArtifacts, main, scanProjects, resolveRequestedProject, DEFAULT_PORT };
