@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Mandor · Live Dashboard</title>
+  <title>Mandor · Live Dashboard (sample)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module" src="https://md-block.verou.me/md-block.js"></script>
   <style>
@@ -28,29 +28,34 @@
     .prose table { width: 100%; border-collapse: collapse; margin: 0.5em 0 }
     .prose th, .prose td { border: 1px solid #e2e8f0; padding: 0.45em 0.65em; text-align: left }
     .prose th { background: #f8fafc; font-weight: 600 }
+    .banner { background:#fef3c7; border:1px solid #fcd34d; color:#92400e }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-900 min-h-screen">
+  <div class="banner text-xs px-4 py-1.5 text-center">
+    Sample dashboard · embedded data only · open this file directly in a browser to view.
+    Live mode requires <code class="bg-amber-100 px-1 rounded">mandor dashboard --project PATH</code>.
+  </div>
   <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
     <div class="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
       <div class="flex items-center gap-3">
         <h1 class="text-xl font-bold tracking-tight">Mandor</h1>
-        <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">live</span>
+        <span class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-700 font-medium">sample</span>
       </div>
       <div class="flex items-center gap-4 text-sm">
         <div class="flex items-center gap-1.5 text-slate-600">
-          <span id="status-dot" class="dot stale"></span>
-          <span id="status-text">connecting…</span>
+          <span id="status-dot" class="dot ok"></span>
+          <span id="status-text">sample data</span>
         </div>
         <div class="text-slate-500">
           updated <span id="updated-at" class="font-mono">—</span>
         </div>
         <div class="flex items-center gap-2 text-xs text-slate-500">
           <label class="flex items-center gap-1 cursor-pointer select-none">
-            <input id="autorefresh" type="checkbox" checked class="accent-emerald-600">
+            <input id="autorefresh" type="checkbox" class="accent-emerald-600">
             auto refresh
           </label>
-          <span class="font-mono">1s</span>
+          <span class="font-mono">off</span>
         </div>
       </div>
     </div>
@@ -63,7 +68,7 @@
   </main>
   <script>
     const POLL_MS = 1000;
-    const state = { data: null, view: 0, autorefresh: true, timer: null, failures: 0, sig: null, openDetails: new Set() };
+    const state = { data: null, view: 0, autorefresh: false, timer: null, failures: 0, sig: null, openDetails: new Set() };
     const $ = (id) => document.getElementById(id);
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmtPct = (n, d) => d ? Math.round(n * 100 / d) + '%' : '—';
@@ -304,6 +309,7 @@
     }
 
     async function poll() {
+      // Sample mode: no remote fetch. If autorefresh is enabled, attempt /api/data.
       if (!state.autorefresh) return;
       try {
         const res = await fetch('/api/data', { cache: 'no-store' });
@@ -325,13 +331,316 @@
       }
     }
 
+    // ---------- Embedded sample data ----------
+    const BRIEF = `# Client Brief — Toko Online
+
+## 1. Client
+PT Maju Bersama, Indonesian SME marketplace operator, founded 2019.
+
+## 2. Problem
+Buyers distrust sellers because product photos are inconsistent and COD fraud is high.
+
+## 3. Target users
+- **Buyers**: Indonesian mobile-first shoppers, 22–45, prefer COD.
+- **Sellers**: small brands with 10–500 SKUs.
+
+## 4. Success metrics
+- 30-day repeat purchase rate ≥ 25%
+- COD fraud rate ≤ 5%
+- Median time-to-purchase ≤ 4 minutes
+
+## 5. Constraints
+- IDR pricing, Bahasa Indonesia UI
+- Must integrate with Xendit (payments) and JNE/J&T (shipping)
+- MVP budget: USD 80k, 90 days
+
+## 6. Out of scope (MVP)
+- Loyalty program (deferred to v2)
+- Live-stream shopping
+- Cross-border shipping
+
+## 7. Approval
+Discovery gate approved 2026-09-05 by PM.
+`;
+
+    const BRD = `# Business Requirements — Toko Online
+
+## B1. Catalog
+- Sellers publish products with ≥3 photos (mandatory)
+- Standardized taxonomy: category → subcategory → tags
+
+## B2. Trust & safety
+- Verified-seller badge tied to NPWP + business bank account
+- Buyer protection: full refund if item not delivered in 14 days
+
+## B3. Payments
+- Methods: COD, virtual account (BCA/Mandiri/BNI), e-wallet (OVO/GoPay/DANA)
+- Settlement T+3 to seller bank account
+
+## B4. Logistics
+- Carrier integration: JNE, J&T, SiCepat
+- Real-time tracking, webhook on delivery
+
+## B5. Operations
+- Seller CSV bulk upload (≤ 10k SKUs per file)
+- Admin dashboard for dispute resolution
+
+## B6. Approvals
+- Source: discovery/interviews/* + PRD §2
+- Approved 2026-09-12
+`;
+
+    const PRD = `# Product Requirements — Toko Online
+
+## P1. Onboarding
+- Buyer signup: email+password or Google OAuth
+- Seller signup: extra KYC step (NPWP, bank statement)
+
+## P2. Catalog (MoSCoW)
+- **Must**: product CRUD, search, filters, ≥3 photo upload
+- **Should**: bulk CSV upload, variant management
+- **Could**: AR preview, video clips
+- **Won't (MVP)**: live-stream, AI recommendations
+
+## P3. Cart & checkout
+- Single-seller carts only (MVP); multi-seller = v2
+- Address book with pin-point map selection
+
+## P4. Post-purchase
+- Order tracking timeline
+- Dispute chat with seller + admin escalation
+
+## P5. Notifications
+- Channels: in-app, email, WhatsApp (via WA Business API)
+- Triggers: order placed, paid, shipped, delivered, dispute opened
+`;
+
+    const STORY = `# US-001 · Buyer signup with email+password
+
+**As** a new buyer
+**I want** to sign up with my email and password
+**So that** I can start shopping without sharing phone number
+
+## Acceptance criteria
+- Email format validated; password ≥ 8 chars, ≥ 1 digit
+- Confirmation email sent within 30s
+- Rate limit: 10 signups per minute per IP
+- Duplicate email returns 409 with friendly message
+
+## Notes
+- See wireframe \`wf_1.html\` (signup screen)
+- Depends on backend task task-001, task-002
+`;
+
+    const STORY2 = `# US-002 · Seller CSV bulk upload
+
+**As** a seller with 200+ SKUs
+**I want** to upload a single CSV with all my products
+**So that** I can publish my catalog in minutes
+
+## Acceptance criteria
+- Accept UTF-8 CSV, ≤ 10 MB, ≤ 10k rows
+- Validate schema; show row-level errors before commit
+- Resume on failure: idempotent row IDs
+- Roll back partial uploads
+
+## Notes
+- See wireframe \`wf_2.html\` (upload progress UI)
+- Risk: risk-002 in milestone timeline
+`;
+
+    const WIRE_1 = `<!doctype html><html><head><meta charset="utf-8"><title>Signup wireframe</title>
+<style>body{font-family:system-ui;max-width:360px;margin:24px auto;padding:0 16px;color:#0f172a}
+h1{font-size:18px;margin:0 0 16px}label{display:block;font-size:12px;margin:12px 0 4px;color:#475569}
+input{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;box-sizing:border-box}
+button{width:100%;padding:12px;background:#1e293b;color:#fff;border:0;border-radius:6px;margin-top:16px;font-weight:600}
+.note{font-size:11px;color:#64748b;margin-top:8px}</style></head><body>
+<h1>Sign up</h1><label>Email</label><input placeholder="you@example.com">
+<label>Password</label><input type="password" placeholder="≥ 8 chars, 1 digit">
+<button>Create account</button>
+<p class="note">By signing up you accept our terms. NDA draft, not legal advice.</p></body></html>`;
+
+    const WIRE_2 = `<!doctype html><html><head><meta charset="utf-8"><title>CSV upload wireframe</title>
+<style>body{font-family:system-ui;max-width:480px;margin:24px auto;padding:0 16px;color:#0f172a}
+h1{font-size:18px;margin:0 0 16px}.drop{border:2px dashed #94a3b8;border-radius:8px;padding:32px;text-align:center;background:#f8fafc}
+.bar{height:8px;background:#e2e8f0;border-radius:4px;margin:16px 0;overflow:hidden}
+.fill{height:100%;background:#16a34a;width:62%}
+.row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid #f1f5f9}
+.err{color:#dc2626}</style></head><body>
+<h1>Bulk product upload</h1><div class="drop">Drop CSV here or click to browse</div>
+<div class="bar"><div class="fill"></div></div>
+<div class="row"><span>row 1,204 / 1,940</span><span class="err">row 1,207 invalid price</span></div>
+<div class="row"><span>row 1,205 / 1,940</span><span style="color:#16a34a">ok</span></div>
+<div class="row"><span>row 1,206 / 1,940</span><span style="color:#16a34a">ok</span></div></body></html>`;
+
+    const UNKNOWN_NOTE = `# Scratchpad
+
+TODO: clarify dispute escalation SLA with ops team.
+Move to docs/discovery.md after.
+`;
+
+    const TIMELINE = {
+      schema_version: "1.0",
+      name: "toko-online",
+      version: "0.1.0",
+      created_at: "2026-09-01T08:00:00Z",
+      updated_at: "2026-09-18T08:00:00Z",
+      next_ids: { source: 4, milestone: 4, wbs: 3, risk: 3, change: 3 },
+      approval: { status: "approved", timestamp: "2026-09-05T09:00:00Z", evidence: "approved by PM after discovery synthesis" },
+      source_trace: [
+        { id: "source-001", location: "docs/discovery.md#client-brief", claim: "Toko Online is a B2C marketplace for SMEs in Indonesia" },
+        { id: "source-002", location: "interviews/buyer-01.md", claim: "Buyers want COD and free returns within 7 days" },
+        { id: "source-003", location: "interviews/seller-02.md", claim: "Sellers need bulk upload via CSV" }
+      ],
+      milestones: [
+        { id: "milestone-001", name: "Discovery", status: "completed", start_timestamp: "2026-09-01T08:00:00Z", target_timestamp: "2026-09-07T17:00:00Z" },
+        { id: "milestone-002", name: "MVP Build", status: "in_progress", start_timestamp: "2026-09-08T08:00:00Z", target_timestamp: "2026-10-15T17:00:00Z" },
+        { id: "milestone-003", name: "Public Launch", status: "todo", start_timestamp: "2026-10-16T08:00:00Z", target_timestamp: "2026-11-30T17:00:00Z" }
+      ],
+      wbs: [
+        { id: "wbs-001", milestone_id: "milestone-002", name: "Auth & user profile" },
+        { id: "wbs-002", milestone_id: "milestone-002", name: "Product catalog & search" }
+      ],
+      risk_register: [
+        { id: "risk-001", description: "COD fraud rate above 5% threshold", likelihood: "medium", impact: "high", mitigation: "limit COD to verified buyers and require pre-auth hold", owner: "risk-lead", status: "open" },
+        { id: "risk-002", description: "Seller CSV upload edge cases corrupt DB", likelihood: "unknown", impact: "unknown", mitigation: "not yet mitigated", owner: "unassigned", status: "open" }
+      ],
+      change_request_log: [
+        { id: "change-001", timestamp: "2026-09-10T10:00:00Z", summary: "Re-scope MVP from web-first to web+mobile-pwa", reason: "Stakeholder review revealed mobile parity is required for launch", affected_ids: ["milestone-002", "wbs-001"], decision: "approved", evidence: "PM sign-off in sync on 2026-09-10" },
+        { id: "change-002", timestamp: "2026-09-12T14:00:00Z", summary: "Defer loyalty program from MVP to v2", reason: "Engineering capacity allocated to search quality", affected_ids: ["milestone-002"], decision: "approved", evidence: null }
+      ]
+    };
+
+    const PHASE_1 = {
+      schema_version: "1.0",
+      plan_name: "toko-online",
+      phase_number: 1,
+      milestone_id: "milestone-002",
+      title: "Auth & user profile",
+      status: "in_progress",
+      created_at: "2026-09-08T08:00:00Z",
+      updated_at: "2026-09-18T08:00:00Z",
+      next_ids: { source: 3, task: 4, change: 2 },
+      source_trace: [
+        { id: "source-001", milestone_id: "milestone-002", location: "specs/auth.md", claim: "Email+password auth with optional OAuth (Google)" },
+        { id: "source-002", milestone_id: "milestone-002", location: "specs/profile.md", claim: "Profile must support buyer and seller personas in one account" }
+      ],
+      tasks: [
+        { id: "task-001", title: "Schema: users + sessions tables", detail: "Postgres DDL for users, sessions, oauth_tokens; include migration script.", status: "completed", progress: [{ timestamp: "2026-09-09T11:00:00Z", message: "DDL merged; index on email verified" }] },
+        { id: "task-002", title: "REST: signup + login endpoints", detail: "POST /auth/signup, POST /auth/login; rate-limit 10/min/IP.", status: "in_progress", progress: [{ timestamp: "2026-09-10T09:00:00Z", message: "signup endpoint done" }, { timestamp: "2026-09-15T16:00:00Z", message: "login endpoint merged; rate-limit pending" }] },
+        { id: "task-003", title: "Google OAuth integration", detail: "Wire Google Identity Services; map email to existing users.", status: "todo", progress: [] }
+      ],
+      change_request_log: [
+        { id: "change-001", timestamp: "2026-09-11T09:00:00Z", summary: "Add password-reset email flow", reason: "Forgot-password was missing from MVP spec", affected_ids: ["task-001"], decision: "requested", evidence: null }
+      ]
+    };
+
+    const PHASE_2 = {
+      schema_version: "1.0",
+      plan_name: "toko-online",
+      phase_number: 2,
+      milestone_id: "milestone-002",
+      title: "Catalog & search",
+      status: "todo",
+      created_at: "2026-09-08T08:05:00Z",
+      updated_at: "2026-09-18T08:05:00Z",
+      next_ids: { source: 1, task: 1, change: 1 },
+      source_trace: [
+        { id: "source-001", milestone_id: "milestone-002", location: "specs/catalog.md", claim: "Product model: title, photos[≥3], price, stock, seller_id, category, tags" }
+      ],
+      tasks: [
+        { id: "task-001", title: "Product CRUD endpoints", detail: "POST/GET/PATCH/DELETE /products with seller-scope authz.", status: "todo", progress: [] },
+        { id: "task-002", title: "Photo upload to S3-compatible store", detail: "Presigned URLs; client uploads direct; webhook records asset_id.", status: "todo", progress: [] },
+        { id: "task-003", title: "Search index (Postgres FTS v1)", detail: "tsvector on title+tags; ranked by recency boost.", status: "todo", progress: [] }
+      ],
+      change_request_log: []
+    };
+
+    const PHASE_3 = {
+      schema_version: "1.0",
+      plan_name: "toko-online",
+      phase_number: 3,
+      milestone_id: "milestone-002",
+      title: "Checkout & payments",
+      status: "todo",
+      created_at: "2026-09-08T08:10:00Z",
+      updated_at: "2026-09-18T08:10:00Z",
+      next_ids: { source: 1, task: 1, change: 1 },
+      source_trace: [
+        { id: "source-001", milestone_id: "milestone-002", location: "specs/payments.md", claim: "Xendit integration: VA, e-wallet, COD flag on invoice" }
+      ],
+      tasks: [
+        { id: "task-001", title: "Cart + checkout state machine", detail: "Server-side cart with idempotent transitions; webhook receivers for Xendit.", status: "todo", progress: [] },
+        { id: "task-002", title: "Xendit VA + e-wallet integration", detail: "Create invoice, poll status, settle order on paid event.", status: "todo", progress: [] },
+        { id: "task-003", title: "COD order flow with verification hold", detail: "Flag buyer pre-auth; auto-release on delivered webhook.", status: "todo", progress: [] }
+      ],
+      change_request_log: []
+    };
+
+    const PHASE_4 = {
+      schema_version: "1.0",
+      plan_name: "toko-online",
+      phase_number: 1,
+      milestone_id: "milestone-002",
+      title: "Ops: dispute console",
+      status: "in_progress",
+      created_at: "2026-09-15T08:00:00Z",
+      updated_at: "2026-09-18T08:00:00Z",
+      next_ids: { source: 1, task: 1, change: 1 },
+      source_trace: [
+        { id: "source-001", milestone_id: "milestone-002", location: "specs/ops.md", claim: "Admin dashboard for dispute resolution with audit trail" }
+      ],
+      tasks: [
+        { id: "task-001", title: "Admin auth + role check", detail: "Separate admin table; require TOTP for sensitive ops.", status: "in_progress", progress: [{ timestamp: "2026-09-16T10:00:00Z", message: "role middleware in place" }] },
+        { id: "task-002", title: "Dispute list + filters", detail: "Filter by status, seller, buyer, time range; export CSV.", status: "todo", progress: [] }
+      ],
+      change_request_log: []
+    };
+
+    const SAMPLE = {
+      markdown: [
+        { path: "client-discovery/client-brief.md", content: BRIEF },
+        { path: "requirements/BRD.md", content: BRD },
+        { path: "requirements/PRD.md", content: PRD },
+        { path: "requirements/user-stories/US-001-signup.md", content: STORY },
+        { path: "requirements/user-stories/US-002-csv-upload.md", content: STORY2 }
+      ],
+      wireframes: [
+        { path: "requirements/wireframes/wf_1.html", content: WIRE_1 },
+        { path: "requirements/wireframes/wf_2.html", content: WIRE_2 }
+      ],
+      json: [
+        { path: "plans/milestone-timeline.json", value: TIMELINE },
+        { path: "plans/toko-online/phase_1.json", value: PHASE_1 },
+        { path: "plans/toko-online/phase_2.json", value: PHASE_2 },
+        { path: "plans/toko-online/phase_3.json", value: PHASE_3 },
+        { path: "plans/toko-online-ops/phase_1.json", value: PHASE_4 }
+      ],
+      unknown: [
+        { path: "scratchpad.md", content: UNKNOWN_NOTE }
+      ],
+      warnings: [
+        "phase_1.json milestone_id 'milestone-002' reference OK in plans/toko-online-ops/phase_1.json",
+        "unknown file detected: scratchpad.md (not under client-discovery/, requirements/, or plans/)"
+      ],
+      meta: {
+        project: "examples/sample-project",
+        root: "examples/sample-project/.mandor",
+        generated_at: "2026-09-21T12:00:00Z",
+        poll_interval_ms: 1000,
+        mode: "sample"
+      }
+    };
+
     function start() {
       buildTabs();
       $('autorefresh').addEventListener('change', (e) => { state.autorefresh = e.target.checked; });
       document.body.addEventListener('click', handleCopyClick);
       bindDetailsToggle();
-      poll();
-      state.timer = setInterval(poll, POLL_MS);
+      state.data = SAMPLE;
+      state.sig = JSON.stringify([SAMPLE.markdown, SAMPLE.json, SAMPLE.wireframes, SAMPLE.unknown, SAMPLE.warnings]);
+      $('updated-at').textContent = new Date(SAMPLE.meta.generated_at).toLocaleTimeString();
+      renderCurrent();
     }
 
     async function copyText(text) {
