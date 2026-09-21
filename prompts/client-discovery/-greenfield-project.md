@@ -29,8 +29,10 @@ Inherits the twelve-section `client-brief.md` schema from
 Return changed artifact paths, unresolved questions, assumptions, and a concise
 discovery summary. Preserve prior evidence and decisions.
 
-After writing or changing discovery Markdown, run the dashboard generator documented
-in `SKILL.md`. Managed JSON remains CLI-only.
+To view artifacts after writing or changing discovery Markdown, start the live
+dashboard with `mandor dashboard`. The dashboard re-reads artifacts on every
+poll (~1s), so JSON and Markdown changes appear automatically within about a
+second; no restart or manual refresh is needed. Managed JSON remains CLI-only.
 
 ## Stop condition
 

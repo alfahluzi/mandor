@@ -72,12 +72,11 @@ create plans, phases, tasks, or code in this route.
 - Wireframes under `requirements/wireframes/` are auto-collected by the
   dashboard server and rendered in the `Requirements` tab via sandboxed
   iframe (`srcdoc`).
-- After writing or editing any wireframe, regenerate the dashboard so the
-  new files appear:
+- After writing or editing any wireframe, no restart or manual refresh is
+  needed: the dashboard re-reads artifacts on every poll (~1s), so new files
+  appear automatically within about a second. Start it if not already running:
   ```sh
   mandor dashboard --port 4173
-  # or, for a one-shot snapshot:
-  node <skill-dir>/scripts/generate-pm-dashboard.js <project-path>
   ```
 
 ## Output
@@ -85,8 +84,10 @@ create plans, phases, tasks, or code in this route.
 Return wireframe filenames, screen slugs, story IDs served, source gaps,
 and the exact approval needed. Mention skipped (headless) stories and why.
 
-After writing or changing wireframes, run the dashboard generator
-documented in `SKILL.md`. Managed JSON remains CLI-only.
+To view artifacts after writing or changing wireframes, start the live
+dashboard with `mandor dashboard`. The dashboard re-reads artifacts on every
+poll (~1s), so wireframe changes appear automatically within about a second;
+no restart or manual refresh is needed. Managed JSON remains CLI-only.
 
 ## Stop condition
 

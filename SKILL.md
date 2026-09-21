@@ -66,15 +66,15 @@ Resolve the project path. Preserve evidence, stable IDs, progress, completed sta
 and unrelated content. Use ISO 8601 timestamps, lowercase kebab-case plan names,
 fixed `BRD.md`/`PRD.md`, and statuses `todo`, `in_progress`, `completed`, `failed`.
 Approval requires explicit user approval. Stop at lifecycle gates. CLI mutations
-atomically validate JSON and regenerate `.mandor/pm.html`; reads do not
-mutate.
+atomically validate managed JSON; reads do not mutate.
 
 ## Live dashboard
 
-For development, run a live HTTP dashboard that polls `/api/data` every second and
-auto-refreshes the JSON view. Markdown is pre-rendered to HTML once at startup.
-JSON changes from any CLI mutation appear immediately on next poll; Markdown
-changes need a restart (or hit `/api/rerender`).
+For development, run a live HTTP dashboard that polls `/api/data` every second.
+The server re-reads the artifact tree on each poll, so both JSON and Markdown
+changes from CLI mutations appear automatically within about a second. Markdown
+is rendered client-side by `<md-block>`, sanitized via its `untrusted` attribute.
+Only edits to the dashboard template itself require restarting the server.
 
 ```sh
 mandor dashboard --port 4173
@@ -82,8 +82,8 @@ mandor dashboard --port 4173
 mandor dashboard --project <project-path> --port 4173
 ```
 
-Endpoints: `GET /` (HTML), `GET /api/data` (snapshot), `GET /api/health`,
-`GET /api/rerender`, `GET /raw/<path>` (path-safe raw files). Press Ctrl+C to stop.
+Endpoints: `GET /` (HTML), `GET /api/data` (artifact JSON), `GET /api/health`,
+`GET /raw/<path>` (path-safe raw files). Press Ctrl+C to stop.
 
 ## Setup
 
@@ -122,7 +122,7 @@ order before retrying:
    `mandor` binary is shadowing it; fix PATH order so `<skill-dir>/bin` comes
    first, or call the wrapper by absolute path.
 4. **Sanity-check the CLI.** `mandor --help` must list the subcommands
-   (`dashboard`, `generate-dashboard`, CRUD verbs). If it errors, run
+   (`dashboard`, CRUD verbs). If it errors, run
    `node <skill-dir>/bin/mandor --help` to see the underlying Node error and
    confirm Node.js 18+ is installed (`node --version`).
 5. **Bypass the wrapper when needed.** Any `mandor <subcommand> ...` example
@@ -132,12 +132,6 @@ order before retrying:
 Until at least step 2 succeeds, do not assume `mandor` is on PATH; prefer the
 absolute-path form to avoid silent command-not-found failures.
 
-Manual dashboard generation:
-
-```sh
-mandor generate-dashboard <project-path>
-```
-
 Runtime layout:
 
 ```text
@@ -145,7 +139,6 @@ Runtime layout:
   client-discovery/  requirements/  plans/
   plans/milestone-timeline.json
   plans/<plan-name>/phase_N.json
-  pm.html
 ```
 
 JSON CRUD is CLI-only. Markdown artifacts remain ordinary files. NDA content is a

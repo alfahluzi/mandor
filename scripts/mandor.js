@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const util = require('util');
-const { generate } = require('./generate-pm-dashboard');
 
 const STATUSES = ['todo', 'in_progress', 'completed', 'failed'];
 const DECISIONS = ['requested', 'approved', 'rejected'];
@@ -94,7 +93,6 @@ class Store {
   phaseFiles(plan) { validateName(plan); const directory = ensurePathSafe(this.project, path.join(this.plans, plan)); if (!fs.existsSync(directory)) return []; ensurePathSafe(this.project, directory); if (!fs.statSync(directory).isDirectory()) throw new PMError(`not a plan directory: ${plan}`); return fs.readdirSync(directory).sort().filter(file => /^phase_[0-9]+\.json$/.test(file)).map(file => ensurePathSafe(this.project, path.join(directory, file))); }
   phase(plan, number) { const file = this.phasePath(plan, number); if (!fs.existsSync(file)) throw new PMError(`missing phase: ${plan}/${number}`); const document = readJson(file); validatePhase(document, file, new Set(this.timeline().milestones.map(item => item.id))); return document; }
   commit(file, document) { atomicWrite(this.project, file, document); }
-  refresh() { try { generate(this.project, { quiet: true }); } catch (error) { throw new PMError(`JSON committed, dashboard refresh failed: ${error.message}`); } }
 }
 function nextId(document, key) { const value = document.next_ids[key]; document.next_ids[key] += 1; return `${PREFIXES[key]}-${String(value).padStart(3, '0')}`; }
 function updateTimestamp(document) { document.updated_at = now(); }
@@ -114,18 +112,17 @@ function initScaffold(store, options) {
     ensureDirectory(store.project, target.path);
     created.push(target.label);
   }
-  try { generate(store.project, { quiet: true }); } catch (error) { throw new PMError(`dashboard refresh failed: ${error.message}`); }
   return { project: store.project, root: store.root, plans: store.plans, created: created.length ? created : 'already present' };
 }
 
 function mutateTimeline(store, options) {
   const file = store.timelinePath();
-  if (options.action === 'init') { required(options, ['name', 'version']); validateName(options.name); if (fs.existsSync(file) && !options.force) throw new PMError('timeline exists; use --force'); ensureDirectory(store.project, store.plans); const document = { schema_version: '1.0', name: options.name, version: options.version, created_at: now(), updated_at: now(), next_ids: { source: 1, milestone: 1, wbs: 1, risk: 1, change: 1 }, approval: { status: 'requested', timestamp: now(), evidence: null }, source_trace: [], milestones: [], wbs: [], risk_register: [], change_request_log: [] }; validateTimeline(document); store.commit(file, document); store.refresh(); return document; }
+  if (options.action === 'init') { required(options, ['name', 'version']); validateName(options.name); if (fs.existsSync(file) && !options.force) throw new PMError('timeline exists; use --force'); ensureDirectory(store.project, store.plans); const document = { schema_version: '1.0', name: options.name, version: options.version, created_at: now(), updated_at: now(), next_ids: { source: 1, milestone: 1, wbs: 1, risk: 1, change: 1 }, approval: { status: 'requested', timestamp: now(), evidence: null }, source_trace: [], milestones: [], wbs: [], risk_register: [], change_request_log: [] }; validateTimeline(document); store.commit(file, document); return document; }
   const document = store.timeline(); if (!options.action || options.action === 'get') return document; if (options.action === 'list') return { source_trace: document.source_trace, milestones: document.milestones, wbs: document.wbs, risk_register: document.risk_register, change_request_log: document.change_request_log };
   if (options.action === 'update-metadata') { if (options.name === undefined && options.version === undefined) throw new PMError('at least one editable field is required'); if (options.name !== undefined) document.name = validateName(options.name); if (options.version !== undefined) document.version = requireString(options.version, 'version'); }
   else if (options.action === 'approve') { required(options, ['status']); if (!DECISIONS.includes(options.status)) throw new PMError('approval status must be requested, approved, or rejected'); document.approval = { status: options.status, timestamp: now(), evidence: options.evidence ?? null }; }
   else editTimelineCollection(store, document, options);
-  updateTimestamp(document); validateTimeline(document); store.commit(file, document); store.refresh(); return document;
+  updateTimestamp(document); validateTimeline(document); store.commit(file, document); return document;
 }
 function editTimelineCollection(store, document, options) {
   const map = { source: ['source_trace', 'source_id'], milestone: ['milestones', 'milestone_id'], wbs: ['wbs', 'wbs_id'], risk: ['risk_register', 'risk_id'], change: ['change_request_log', 'change_id'] }; const kind = Object.keys(map).find(key => options.action.endsWith(`-${key}`)); if (!kind) throw new PMError(`unknown milestone command: ${options.action}`); const [collection] = map[kind]; const items = document[collection];
@@ -164,7 +161,6 @@ function mutatePlan(store, options) {
       };
     }
     ensureDirectory(store.project, directory);
-    store.refresh();
     return { plan_name: plan, initialized: true, phase_count: 0 };
   }
 
@@ -195,9 +191,9 @@ function mutatePlan(store, options) {
   return mutatePhaseContent(store, plan, options);
 }
 function planSummary(store, plan, phase) { if (phase !== undefined) return store.phase(plan, phase); const rows = store.phaseFiles(plan).map(file => { const p = store.phase(plan, Number(path.basename(file).match(/\d+/)[0])); const total = p.tasks.length; const done = p.tasks.filter(task => task.status === 'completed').length; return { phase_number: p.phase_number, title: p.title, status: p.status, task_completion_percentage: total ? Math.round(done * 100 / total) : 0 }; }); const taskCount = store.phaseFiles(plan).reduce((total, file) => total + store.phase(plan, Number(path.basename(file).match(/\d+/)[0])).tasks.length, 0); const completed = store.phaseFiles(plan).reduce((total, file) => total + store.phase(plan, Number(path.basename(file).match(/\d+/)[0])).tasks.filter(task => task.status === 'completed').length, 0); return { plan_name: plan, phase_count: rows.length, task_count: taskCount, completion_percentage: taskCount ? Math.round(completed * 100 / taskCount) : 0, phases: rows }; }
-function mutatePhase(store, plan, options) { const number = options.phase; required(options, ['phase']); const file = store.phasePath(plan, number); const timeline = store.timeline(); const milestoneIds = new Set(timeline.milestones.map(item => item.id)); if (options.action === 'add-phase') { if (timeline.approval.status !== 'approved') throw new PMError('timeline must be approved before adding phases'); if (fs.existsSync(file)) throw new PMError('phase already exists'); required(options, ['milestone_id', 'title']); if (!milestoneIds.has(options.milestone_id)) throw new PMError('unknown milestone ID'); ensureDirectory(store.project, path.dirname(file)); const phase = { schema_version: '1.0', plan_name: plan, phase_number: number, milestone_id: options.milestone_id, title: options.title, status: options.status || 'todo', created_at: now(), updated_at: now(), next_ids: { source: 1, task: 1, change: 1 }, source_trace: [], tasks: [], change_request_log: [] }; validatePhase(phase, file, milestoneIds); store.commit(file, phase); store.refresh(); return phase; } const phase = store.phase(plan, number); if (options.action === 'delete-phase') { if (phase.tasks.length && !options.force) throw new PMError('phase is non-empty; use --force for irreversible deletion'); const backup = `${file}.${crypto.randomBytes(8).toString('hex')}.backup`; fs.renameSync(file, backup); try { store.refresh(); fs.rmSync(backup, { force: true }); } catch (error) { try { fs.renameSync(backup, file); } catch (_) {} throw error; } return { deleted: path.basename(file) }; } if (options.action === 'update-phase') { if (!['milestone_id', 'title', 'status'].some(key => options[key] !== undefined)) throw new PMError('at least one editable field is required'); if (options.milestone_id !== undefined && !milestoneIds.has(options.milestone_id)) throw new PMError('unknown milestone ID'); if (options.milestone_id !== undefined) phase.milestone_id = options.milestone_id; if (options.title !== undefined) phase.title = options.title; if (options.status !== undefined) phase.status = validateStatus(options.status); } phase.updated_at = now(); validatePhase(phase, file, milestoneIds); store.commit(file, phase); store.refresh(); return phase; }
+function mutatePhase(store, plan, options) { const number = options.phase; required(options, ['phase']); const file = store.phasePath(plan, number); const timeline = store.timeline(); const milestoneIds = new Set(timeline.milestones.map(item => item.id)); if (options.action === 'add-phase') { if (timeline.approval.status !== 'approved') throw new PMError('timeline must be approved before adding phases'); if (fs.existsSync(file)) throw new PMError('phase already exists'); required(options, ['milestone_id', 'title']); if (!milestoneIds.has(options.milestone_id)) throw new PMError('unknown milestone ID'); ensureDirectory(store.project, path.dirname(file)); const phase = { schema_version: '1.0', plan_name: plan, phase_number: number, milestone_id: options.milestone_id, title: options.title, status: options.status || 'todo', created_at: now(), updated_at: now(), next_ids: { source: 1, task: 1, change: 1 }, source_trace: [], tasks: [], change_request_log: [] }; validatePhase(phase, file, milestoneIds); store.commit(file, phase); return phase; } const phase = store.phase(plan, number); if (options.action === 'delete-phase') { if (phase.tasks.length && !options.force) throw new PMError('phase is non-empty; use --force for irreversible deletion'); fs.rmSync(file, { force: true }); return { deleted: path.basename(file) }; } if (options.action === 'update-phase') { if (!['milestone_id', 'title', 'status'].some(key => options[key] !== undefined)) throw new PMError('at least one editable field is required'); if (options.milestone_id !== undefined && !milestoneIds.has(options.milestone_id)) throw new PMError('unknown milestone ID'); if (options.milestone_id !== undefined) phase.milestone_id = options.milestone_id; if (options.title !== undefined) phase.title = options.title; if (options.status !== undefined) phase.status = validateStatus(options.status); } phase.updated_at = now(); validatePhase(phase, file, milestoneIds); store.commit(file, phase); return phase; }
 function mutatePhaseContent(store, plan, options) { const number = options.phase; required(options, ['phase']); const file = store.phasePath(plan, number); const phase = store.phase(plan, number); const timeline = store.timeline(); const milestones = new Set(timeline.milestones.map(item => item.id)); const id = options.task_id; const action = options.action; if (!id && !['add-source', 'add-task', 'add-change'].includes(action)) throw new PMError('an item ID (SOURCE_ID/TASK_ID/CHANGE_ID) is required'); if (action === 'add-source') { required(options, ['milestone_id', 'location', 'claim']); if (!milestones.has(options.milestone_id)) throw new PMError('unknown milestone ID'); phase.source_trace.push({ id: nextId(phase, 'source'), milestone_id: options.milestone_id, location: options.location, claim: options.claim }); } else if (action === 'add-task') { required(options, ['title', 'detail']); phase.tasks.push({ id: nextId(phase, 'task'), title: options.title, detail: options.detail, status: options.status || 'todo', progress: [] }); } else if (action === 'add-change') phase.change_request_log.push(changeFrom(options, nextId(phase, 'change'))); else { const collection = action.includes('source') ? phase.source_trace : action.includes('task') || action.includes('progress') ? phase.tasks : phase.change_request_log; const item = find(collection, id); if (['delete-source', 'delete-task', 'delete-change'].includes(action)) collection.splice(collection.indexOf(item), 1); else if (action === 'set-task-status') item.status = validateStatus(options.status); else if (action === 'add-progress') { required(options, ['message']); item.progress.push({ timestamp: now(), message: options.message }); } else if (action === 'update-progress' || action === 'delete-progress') { integer(options.index, 'index'); if (options.index >= item.progress.length) throw new PMError('progress index out of range'); if (action === 'delete-progress') item.progress.splice(options.index, 1); else { required(options, ['message']); item.progress[options.index] = { timestamp: now(), message: options.message }; } } else if (action === 'update-change') editChange(item, options); else if (action === 'update-source') { if (options.milestone_id !== undefined) { if (!milestones.has(options.milestone_id)) throw new PMError('unknown milestone ID'); item.milestone_id = options.milestone_id; } if (options.location !== undefined) item.location = options.location; if (options.claim !== undefined) item.claim = options.claim; } else if (action === 'update-task') { if (options.title !== undefined) item.title = options.title; if (options.detail !== undefined) item.detail = options.detail; if (options.status !== undefined) item.status = validateStatus(options.status); } else throw new PMError(`unknown plan command: ${action}`); }
-  phase.updated_at = now(); validatePhase(phase, file, milestones); store.commit(file, phase); store.refresh(); return phase;
+  phase.updated_at = now(); validatePhase(phase, file, milestones); store.commit(file, phase); return phase;
 }
 
 const OPTION_KEYS = new Set(['name', 'version', 'force', 'status', 'evidence', 'location', 'claim', 'start', 'target', 'milestone_id', 'description', 'likelihood', 'impact', 'mitigation', 'owner', 'risk_status', 'summary', 'reason', 'affected_id', 'decision', 'phase', 'title', 'detail', 'task_id', 'message', 'index', 'port', 'host']);
@@ -210,7 +206,7 @@ function help(resource) {
     out(`${usage}`);
     out('');
     out('Manage the .mandor/ artifact tree for a project. The CLI atomically');
-    out('validates JSON, regenerates .mandor/pm.html on writes, and never');
+    out('validates JSON, writes atomically, and never');
     out('touches managed JSON files directly — only via the subcommands below.');
     out('');
     out('Global options:');
@@ -279,10 +275,11 @@ function help(resource) {
   if (resource === 'dashboard') {
     out(`${usage.replace('<command> [args]', 'dashboard [--port N] [--host H]')}`);
     out('');
-    out('Start a live HTTP dashboard for the project. The server pre-renders all');
-    out('Markdown under .mandor/ to HTML at startup, then serves a polling');
-    out('UI that re-fetches /api/data every 1 second. JSON changes appear live;');
-    out('Markdown changes require a restart (or POST /api/rerender).');
+    out('Start a live HTTP dashboard for the project. The server serves a live');
+    out('UI that re-reads the .mandor/ tree on every /api/data poll (about once');
+    out('per second). Markdown is rendered in the browser by the <md-block>');
+    out('component (sanitized), so JSON and Markdown changes both appear within');
+    out('about a second.');
     out('');
     out('Options:');
     out('  --port N   TCP port to bind (default: 4173)');
@@ -290,9 +287,8 @@ function help(resource) {
     out('');
     out('Endpoints served:');
     out('  GET /             Dashboard HTML');
-    out('  GET /api/data     JSON snapshot of all artifacts + pre-rendered MD');
+    out('  GET /api/data     JSON snapshot of all artifacts');
     out('  GET /api/health   {ok, project, port, host, poll_interval_ms}');
-    out('  GET /api/rerender Force re-render of all Markdown');
     out('  GET /raw/<path>   Serve a raw file from .mandor/ (path-safe)');
     out('');
     out('Press Ctrl+C to stop the server.');

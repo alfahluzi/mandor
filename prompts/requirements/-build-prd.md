@@ -31,8 +31,10 @@ back-reference context.
 Return artifact path, changed sections, requirement IDs created, MoSCoW
 breakdown, source gaps, assumptions, and the exact approval needed.
 
-After writing or changing `PRD.md`, run the dashboard generator documented in
-`SKILL.md`. Managed JSON remains CLI-only.
+To view artifacts after writing or changing `PRD.md`, start the live dashboard
+with `mandor dashboard`. The dashboard re-reads artifacts on every poll (~1s),
+so JSON and Markdown changes appear automatically within about a second; no
+restart or manual refresh is needed. Managed JSON remains CLI-only.
 
 ## Stop condition
 

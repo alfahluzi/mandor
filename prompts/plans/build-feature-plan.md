@@ -79,8 +79,8 @@ Field shape per item:
   IDs referencing other items inside the phase. `decision` is one of
   `requested`, `approved`, `rejected`. `evidence` is text or `null`.
 
-Do not invent extra fields. The CLI validates atomically and
-regenerates `.mandor/pm.html` on every write.
+Do not invent extra fields. The CLI validates and writes JSON atomically
+on every write; no dashboard file is generated.
 
 ## Process
 
@@ -145,9 +145,12 @@ Return:
 - CLI JSON output for every mutation.
 - Open questions, assumptions, and the exact approval needed.
 
-After every mutation, the CLI regenerates `.mandor/pm.html`. No
-manual edits to managed JSON. Run the dashboard generator documented in
-`SKILL.md` after any Markdown change.
+After every mutation, the CLI validates and writes JSON atomically; no
+dashboard file is generated. No manual edits to managed JSON. To view
+artifacts after any Markdown change, start the live dashboard with
+`mandor dashboard` (the dashboard re-reads artifacts on every poll (~1s), so
+JSON and Markdown changes appear automatically within about a second; no
+restart or manual refresh is needed).
 
 ## Stop condition
 

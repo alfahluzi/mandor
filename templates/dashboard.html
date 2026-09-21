@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Mandor · Live Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="https://md-block.verou.me/md-block.js"></script>
   <style>
     .prose h1,.prose h2,.prose h3,.prose h4 { font-weight:600; margin:0.6em 0 0.3em }
     .prose h1 { font-size:1.5rem } .prose h2 { font-size:1.25rem } .prose h3 { font-size:1.1rem }
@@ -22,6 +23,11 @@
     .tab-active { background:#1e293b; color:#fff }
     .scrollbar-thin::-webkit-scrollbar { height:6px; width:6px }
     .scrollbar-thin::-webkit-scrollbar-thumb { background:#94a3b8; border-radius:3px }
+    md-block { display: block; transition: opacity 150ms ease-in-out }
+    md-block:not([rendered]) { opacity: 0 }
+    .prose table { width: 100%; border-collapse: collapse; margin: 0.5em 0 }
+    .prose th, .prose td { border: 1px solid #e2e8f0; padding: 0.45em 0.65em; text-align: left }
+    .prose th { background: #f8fafc; font-weight: 600 }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-900 min-h-screen">
@@ -57,7 +63,7 @@
   </main>
   <script>
     const POLL_MS = 1000;
-    const state = { data: null, view: 0, autorefresh: true, timer: null, failures: 0 };
+    const state = { data: null, view: 0, autorefresh: true, timer: null, failures: 0, sig: null };
     const $ = (id) => document.getElementById(id);
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const fmtPct = (n, d) => d ? Math.round(n * 100 / d) + '%' : '—';
@@ -76,28 +82,33 @@
       </span>`;
     }
 
-    function renderMarkdown(content) {
-      return content || '<p class="text-slate-400 italic">empty</p>';
-    }
-
-    function docCard(path, html) {
+    function docCard(path) {
       return `<article class="rounded-lg bg-white shadow-sm border border-slate-200 overflow-hidden">
         <header class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <span class="font-mono text-xs text-slate-600">${esc(path)}</span>
         </header>
-        <div class="prose p-4 max-w-none">${html}</div>
+        <div class="prose p-4 max-w-none"><md-block untrusted data-md-path="${esc(path)}"></md-block></div>
+      </article>`;
+    }
+
+    function rawCard(path, content) {
+      return `<article class="rounded-lg bg-white shadow-sm border border-slate-200 overflow-hidden">
+        <header class="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+          <span class="font-mono text-xs text-slate-600">${esc(path)}</span>
+        </header>
+        <pre class="p-4 text-xs overflow-x-auto scrollbar-thin">${esc(content || '')}</pre>
       </article>`;
     }
 
     function discoveryView(data) {
       const docs = data.markdown.filter(x => x.path.startsWith('client-discovery/'));
       if (!docs.length) return empty('No client discovery documents yet.');
-      return `<div class="grid gap-4">${docs.map(x => docCard(x.path, data.rendered[x.path] || renderMarkdown(x.content))).join('')}</div>`;
+      return `<div class="grid gap-4">${docs.map(x => docCard(x.path)).join('')}</div>`;
     }
 
     function requirementsView(data) {
       const docs = data.markdown.filter(x => x.path.startsWith('requirements/'));
-      const wireDocs = docs.length ? docs.map(x => docCard(x.path, data.rendered[x.path] || renderMarkdown(x.content))).join('') : '';
+      const wireDocs = docs.length ? docs.map(x => docCard(x.path)).join('') : '';
       const wires = data.wireframes.map(w => `<article class="rounded-lg bg-white shadow-sm border border-slate-200 overflow-hidden">
         <header class="px-4 py-2 bg-slate-50 border-b border-slate-200"><span class="font-mono text-xs text-slate-600">${esc(w.path)}</span></header>
         <iframe class="w-full h-96 bg-white" sandbox srcdoc=""></iframe>
@@ -181,7 +192,7 @@
         <pre class="p-4 text-xs overflow-x-auto scrollbar-thin">${esc(JSON.stringify(x.value, null, 2))}</pre>
       </article>`).join('');
       const unknownDocs = data.unknown.length
-        ? `<div class="mt-4"><div class="text-sm font-semibold mb-2 text-slate-600">Unknown files</div><div class="grid gap-4">${data.unknown.map(x => docCard(x.path, '<pre class="text-xs">' + esc(x.content || '') + '</pre>')).join('')}</div></div>`
+        ? `<div class="mt-4"><div class="text-sm font-semibold mb-2 text-slate-600">Unknown files</div><div class="grid gap-4">${data.unknown.map(x => rawCard(x.path, x.content)).join('')}</div></div>`
         : '';
       return (cards || '<p class="text-slate-400 italic">No additional JSON files.</p>') + unknownDocs;
     }
@@ -242,6 +253,10 @@
       $('summary').innerHTML = summaryCards(data);
       $('app').innerHTML = views[state.view].render(data);
       $('warnings').innerHTML = warningsView(data);
+      $('app').querySelectorAll('md-block[data-md-path]').forEach(el => {
+        const doc = data.markdown.find(m => m.path === el.getAttribute('data-md-path'));
+        if (doc) el.mdContent = doc.content;
+      });
       $('app').querySelectorAll('iframe').forEach((frame, n) => {
         frame.srcdoc = data.wireframes[n]?.content || '';
       });
@@ -252,12 +267,16 @@
       try {
         const res = await fetch('/api/data', { cache: 'no-store' });
         if (!res.ok) throw new Error('status ' + res.status);
-        state.data = await res.json();
+        const data = await res.json();
+        state.data = data;
         state.failures = 0;
         $('status-dot').className = 'dot ok';
         $('status-text').textContent = 'live';
-        $('updated-at').textContent = new Date(state.data.meta.generated_at).toLocaleTimeString();
-        renderCurrent();
+        $('updated-at').textContent = data.meta?.generated_at
+          ? new Date(data.meta.generated_at).toLocaleTimeString()
+          : '—';
+        const sig = JSON.stringify([data.markdown, data.json, data.wireframes, data.unknown, data.warnings]);
+        if (sig !== state.sig) { state.sig = sig; renderCurrent(); }
       } catch (error) {
         state.failures += 1;
         $('status-dot').className = 'dot ' + (state.failures > 2 ? 'err' : 'stale');

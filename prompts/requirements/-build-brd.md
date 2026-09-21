@@ -32,8 +32,10 @@ wireframes in this route.
 Return artifact path, changed sections, BRD requirement IDs created, source
 gaps, assumptions, and the exact approval needed.
 
-After writing or changing `BRD.md`, run the dashboard generator documented in
-`SKILL.md`. Managed JSON remains CLI-only.
+To view artifacts after writing or changing `BRD.md`, start the live dashboard
+with `mandor dashboard`. The dashboard re-reads artifacts on every poll (~1s),
+so JSON and Markdown changes appear automatically within about a second; no
+restart or manual refresh is needed. Managed JSON remains CLI-only.
 
 ## Stop condition
 

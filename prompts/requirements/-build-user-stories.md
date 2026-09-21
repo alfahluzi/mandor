@@ -44,8 +44,10 @@ back-reference.
 Return artifact paths, user-story IDs and titles, PRD and BRD requirement
 IDs covered, source gaps, assumptions, and the exact approval needed.
 
-After writing or changing story files, run the dashboard generator
-documented in `SKILL.md`. Managed JSON remains CLI-only.
+To view artifacts after writing or changing story files, start the live
+dashboard with `mandor dashboard`. The dashboard re-reads artifacts on every
+poll (~1s), so JSON and Markdown changes appear automatically within about a
+second; no restart or manual refresh is needed. Managed JSON remains CLI-only.
 
 ## Stop condition
 

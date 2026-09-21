@@ -105,8 +105,11 @@ Return the artifact path, changed sections, unresolved questions, assumptions,
 and a concise discovery summary. Preserve prior evidence, decisions, and
 completed markers.
 
-After writing or changing the brief, run the dashboard generator documented in
-`SKILL.md`. Managed JSON remains CLI-only.
+To view artifacts after writing or changing the brief, start the live dashboard
+with `mandor dashboard` (or `mandor dashboard --project <project-path> --port
+4173`). The dashboard re-reads artifacts on every poll (~1s), so JSON and
+Markdown changes appear automatically within about a second; no restart or
+manual refresh is needed. Managed JSON remains CLI-only.
 
 ## Stop condition
 

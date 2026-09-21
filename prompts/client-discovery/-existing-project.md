@@ -33,8 +33,10 @@ Return the artifact path, changed sections, gaps, unresolved questions, and
 approval questions. Preserve existing completed markers and unrelated project
 content.
 
-After writing or changing discovery Markdown, run the dashboard generator
-documented in `SKILL.md`. Managed JSON remains CLI-only.
+To view artifacts after writing or changing discovery Markdown, start the live
+dashboard with `mandor dashboard`. The dashboard re-reads artifacts on every
+poll (~1s), so JSON and Markdown changes appear automatically within about a
+second; no restart or manual refresh is needed. Managed JSON remains CLI-only.
 
 ## Stop condition
 

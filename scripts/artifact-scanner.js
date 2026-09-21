@@ -1,10 +1,8 @@
-#!/usr/bin/env node
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const TEMPLATE = path.join(__dirname, '..', 'templates', 'pm.html');
 const ARTIFACT_DIR = '.mandor';
 
 function rejectSymlink(file) {
@@ -78,59 +76,9 @@ function readArtifacts(project) {
   return result;
 }
 
-function atomicWrite(destination, content) {
-  const parent = path.dirname(destination);
-  fs.mkdirSync(parent, { recursive: true });
-  rejectSymlink(parent);
-  if (fs.existsSync(destination)) rejectSymlink(destination);
-  const temporary = path.join(parent, `.${path.basename(destination)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`);
-  let fd;
-  try {
-    fd = fs.openSync(temporary, 'wx', 0o600);
-    fs.writeFileSync(fd, content, 'utf8');
-    fs.fsyncSync(fd);
-    fs.closeSync(fd); fd = undefined;
-    rejectSymlink(parent);
-    if (fs.existsSync(destination)) rejectSymlink(destination);
-    fs.renameSync(temporary, destination);
-  } catch (error) {
-    if (fd !== undefined) fs.closeSync(fd);
-    try { fs.unlinkSync(temporary); } catch (_) { /* best effort cleanup */ }
-    throw error;
-  }
-}
-
-function generate(project, options = {}) {
-  const projectPath = path.resolve(project);
-  const root = artifactRoot(projectPath);
-  fs.mkdirSync(root, { recursive: true });
-  rejectSymlink(root);
-  const data = readArtifacts(projectPath);
-  const template = fs.readFileSync(TEMPLATE, 'utf8');
-  const embedded = JSON.stringify(data).replace(/</g, '\\u003c');
-  atomicWrite(path.join(root, 'pm.html'), template.replace('__PM_DATA__', embedded));
-  for (const warning of data.warnings) process.stderr.write(`warning: ${warning}\n`);
-  if (!options.quiet) process.stdout.write(`${path.join(root, 'pm.html')}\n`);
-  return data;
-}
-
-function main(argv) {
-  let project = null;
-  for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--project') {
-      if (project !== null || !argv[i + 1] || argv[i + 1].startsWith('--')) throw new Error('--project requires one path');
-      project = argv[++i];
-    } else if (argv[i].startsWith('--')) throw new Error(`unknown option: ${argv[i]}`);
-    else if (project !== null) throw new Error('use a positional project path or --project, not both');
-    else project = argv[i];
-  }
-  if (!project) throw new Error('a project path is required');
-  generate(project);
-}
-
-if (require.main === module) {
-  try { main(process.argv.slice(2)); }
-  catch (error) { process.stderr.write(`error: ${error.message}\n`); process.exitCode = 1; }
-}
-
-module.exports = { generate, readArtifacts };
+module.exports = {
+  ARTIFACT_DIR,
+  rejectSymlink,
+  artifactRoot,
+  readArtifacts
+};

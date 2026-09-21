@@ -197,9 +197,12 @@ Return:
 - Open questions, assumptions, deferred story IDs, and the exact
   approval needed.
 
-After every mutation, the CLI regenerates `.mandor/pm.html`. No manual
-edits to managed JSON. Run the dashboard generator documented in
-`SKILL.md` after any Markdown change.
+After every mutation, the CLI validates and writes JSON atomically; no
+dashboard file is generated. No manual edits to managed JSON. To view
+artifacts after any Markdown change, start the live dashboard with
+`mandor dashboard` (the dashboard re-reads artifacts on every poll (~1s), so
+JSON and Markdown changes appear automatically within about a second; no
+restart or manual refresh is needed).
 
 ## Stop condition
 

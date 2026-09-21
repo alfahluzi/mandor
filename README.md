@@ -62,26 +62,24 @@ mandor --project PATH plan list
 
 By default, commands print a human-readable representation. Use `--json` for
 machine-readable JSON and interoperability. Every successful JSON mutation
-validates the full document, writes atomically, and regenerates `pm.html`; reads
-do not mutate.
+validates the full document and writes atomically; reads do not mutate.
 Phase deletion rejects non-empty phases unless `--force`; forced deletion is
 irreversible. Milestone initialization refuses overwrite unless `--force`.
 Plan initialization is idempotent and preserves existing phase files.
 
-Manual dashboard generation:
+Live dashboard:
 
 ```sh
- node <skill-dir>/scripts/generate-pm-dashboard.js <project-path>
+mandor dashboard [--project PATH] [--port 4173]
 ```
 
-The generator also accepts `--project <project-path>`. It recursively reads the
-supported artifact tree, excludes `pm.html`, tolerates malformed JSON with
-warnings, and writes `<project-path>/.mandor/pm.html` deterministically.
-
-Open `pm.html` directly in a browser; no server is required. Styling loads
-Tailwind from its CDN, so styling needs network access. Artifact data remains
-embedded in the local HTML snapshot. Wireframes render in sandboxed iframes
-without `allow-scripts`.
+The live server serves the UI and re-reads the artifact tree on every `/api/data`
+poll (~1s), so both JSON and Markdown changes appear automatically within about a
+second. Only edits to the dashboard template itself require restarting the
+server. Markdown is rendered in the browser by `<md-block>` (sanitized via its
+`untrusted` attribute). The page loads Tailwind, `<md-block>`, `marked`, and
+DOMPurify from CDNs, so it needs network access. Wireframes render in sandboxed
+iframes without `allow-scripts`.
 
 Dashboard tabs: Client Discovery; Requirements with document text and every
 recursive HTML wireframe preview; Plans with timeline summary, plan accordions,
@@ -96,8 +94,7 @@ mandor/
   examples/sample-project/.mandor/
   bin/mandor
   scripts/mandor.js
-  scripts/generate-pm-dashboard.js
-  templates/pm.html
+  templates/dashboard.html
   templates/json/*.json
 ```
 
