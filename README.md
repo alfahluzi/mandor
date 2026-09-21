@@ -73,6 +73,10 @@ Live dashboard:
 mandor dashboard [--project PATH] [--port 4173]
 ```
 
+Without `--project`, the server scans the current directory's parent + siblings
+for any folder containing `.mandor/` and lets you pick from the header
+dropdown. `MANDOR_PROJECTS_ROOTS=/path1,/path2` adds custom discovery roots.
+
 The live server serves the UI and re-reads the artifact tree on every `/api/data`
 poll (~1s), so both JSON and Markdown changes appear automatically within about a
 second. Only edits to the dashboard template itself require restarting the

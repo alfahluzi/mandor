@@ -24,7 +24,7 @@ sh install.sh --destination PATH --force                # overwrite existing
 node scripts/mandor.js --project PATH init
 
 # live dashboard (polls /api/data every 1s)
-node scripts/mandor.js dashboard --project PATH --port 4173
+node scripts/mandor.js dashboard --port 4173   # scans cwd + parents for .mandor/
 ```
 
 ## Tests

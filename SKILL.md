@@ -78,12 +78,18 @@ Only edits to the dashboard template itself require restarting the server.
 
 ```sh
 mandor dashboard --port 4173
-# or directly:
+# or pin one project (skips dropdown discovery):
 mandor dashboard --project <project-path> --port 4173
 ```
 
-Endpoints: `GET /` (HTML), `GET /api/data` (artifact JSON), `GET /api/health`,
-`GET /raw/<path>` (path-safe raw files). Press Ctrl+C to stop.
+Without `--project`, the server scans the current directory's parent + siblings
+for any folder containing `.mandor/`. Set `MANDOR_PROJECTS_ROOTS=/path1,/path2`
+to add custom discovery roots. Pick a project from the header dropdown; the URL
+is updated to `?project=<abs-path>` and `/api/data` re-reads from there.
+
+Endpoints: `GET /` (HTML), `GET /api/data` (snapshot, honors `?project=`),
+`GET /api/health`, `GET /api/projects`, `GET /raw/<path>` (path-safe raw files,
+honors `?project=`). Press Ctrl+C to stop.
 
 ## Setup
 

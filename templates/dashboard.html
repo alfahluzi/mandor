@@ -345,15 +345,33 @@
           opt.title = p.path;
           sel.appendChild(opt);
         }
+        if (payload.projects.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'no projects found';
+          sel.appendChild(opt);
+          sel.disabled = true;
+          state.activeProject = null;
+          return;
+        }
         const url = new URL(location.href);
         const requested = url.searchParams.get('project');
-        state.activeProject = requested || payload.default;
-        sel.value = state.activeProject;
+        const defaultHasArtifact = payload.projects.some(p => p.path === payload.default);
+        const initial = requested
+          || (defaultHasArtifact ? payload.default : payload.projects[0].path);
+        state.activeProject = initial;
+        sel.value = initial;
         sel.addEventListener('change', () => {
           const next = sel.value;
           const u = new URL(location.href);
-          if (next === payload.default) u.searchParams.delete('project');
-          else u.searchParams.set('project', next);
+          const defaultStillHas = payload.projects.some(p => p.path === payload.default);
+          if (next === payload.default && !defaultStillHas) {
+            u.searchParams.delete('project');
+          } else if (next === payload.default) {
+            u.searchParams.delete('project');
+          } else {
+            u.searchParams.set('project', next);
+          }
           history.replaceState({}, '', u);
           state.activeProject = next;
           state.sig = null;

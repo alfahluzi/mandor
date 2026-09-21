@@ -36,7 +36,7 @@ function isProjectDir(candidate) {
   }
 }
 
-function scanProjects(defaultProject) {
+function scanProjects(searchRoot) {
   const seen = new Set();
   const projects = [];
   const add = (raw) => {
@@ -46,29 +46,29 @@ function scanProjects(defaultProject) {
     seen.add(absolute);
     projects.push({ path: absolute, name: path.basename(absolute) || absolute });
   };
-  add(defaultProject);
+  // 1. The search root itself (if it has .mandor).
+  add(searchRoot);
+  // 2. One-level children of the search root.
+  try {
+    for (const entry of fs.readdirSync(searchRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      add(path.join(searchRoot, entry.name));
+    }
+  } catch (_) {}
+  // 3. Env-configured roots: scan one level deep of each.
   const envRoots = (process.env.MANDOR_PROJECTS_ROOTS || '')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
   for (const root of envRoots) {
-    if (!isProjectDir(root)) continue;
     try {
+      if (isProjectDir(root)) add(root);
       for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
         add(path.join(root, entry.name));
       }
     } catch (_) {}
   }
-  try {
-    const parent = path.dirname(path.resolve(defaultProject));
-    if (isProjectDir(parent)) {
-      for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        add(path.join(parent, entry.name));
-      }
-    }
-  } catch (_) {}
   projects.sort((a, b) => a.name.localeCompare(b.name));
   return projects;
 }
@@ -84,13 +84,15 @@ function resolveRequestedProject(defaultProject, requested) {
   return { project: absolute, requested };
 }
 
-function serve({ project, port, host = '127.0.0.1' }) {
-  const root = artifactRoot(project);
-  fs.mkdirSync(root, { recursive: true });
-  const initial = readArtifacts(project);
+function serve({ project, port, host = '127.0.0.1', createRoot = true }) {
+  const hasOwnProject = isProjectDir(project);
+  if (hasOwnProject && createRoot) {
+    fs.mkdirSync(artifactRoot(project), { recursive: true });
+  }
   const templateHtml = fs.readFileSync(TEMPLATE_HTML, 'utf8');
   const projects = scanProjects(project);
   const defaultProject = project;
+  const defaultIsUsable = hasOwnProject || projects.length > 0;
 
   const server = http.createServer((req, res) => {
     try {
@@ -108,10 +110,13 @@ function serve({ project, port, host = '127.0.0.1' }) {
       }
       if (url.pathname === '/api/data') {
         const requested = url.searchParams.get('project');
+        if (!requested && !hasOwnProject) {
+          return send(res, 400, 'text/plain', 'no project selected: pick one from the dropdown or pass ?project=PATH');
+        }
         let active = defaultProject;
         let requestedProject = null;
         try {
-          const resolved = resolveRequestedProject(defaultProject, requested);
+          const resolved = resolveRequestedProject(defaultProject, requested || defaultProject);
           active = resolved.project;
           requestedProject = resolved.requested;
         } catch (error) {
@@ -169,9 +174,13 @@ function serve({ project, port, host = '127.0.0.1' }) {
 
   server.listen(port, host, () => {
     process.stdout.write(`dashboard: http://${host}:${port}/\n`);
-    process.stdout.write(`project:   ${project}\n`);
-    process.stdout.write(`root:      ${root}\n`);
-    process.stdout.write(`md docs:   ${initial.markdown.length}\n`);
+    process.stdout.write(`discovery: ${path.resolve(project)}\n`);
+    process.stdout.write(`projects:  ${projects.length} found\n`);
+    if (projects.length === 0) {
+      process.stdout.write('hint:     run from a parent of your project dirs, or set MANDOR_PROJECTS_ROOTS=/path1,/path2\n');
+    } else {
+      for (const p of projects) process.stdout.write(`  - ${p.path}${p.path === defaultProject ? ' (default)' : ''}\n`);
+    }
     process.stdout.write(`poll:      ${POLL_INTERVAL_MS}ms\n`);
     process.stdout.write('press Ctrl+C to stop\n');
   });
@@ -218,6 +227,8 @@ function main(argv) {
       process.env.PM_DASHBOARD_HOST = argv[++i];
     } else if (word === '--help' || word === '-h') {
       process.stdout.write('Usage: mandor dashboard [--project PATH] [--port N] [--host H]\n');
+      process.stdout.write('Without --project, scans the current directory (and parents/siblings) for any folder containing .mandor/.\n');
+      process.stdout.write('Set MANDOR_PROJECTS_ROOTS=/path1,/path2 to add custom discovery roots.\n');
       return 0;
     } else {
       throw new Error(`unknown option: ${word}`);
