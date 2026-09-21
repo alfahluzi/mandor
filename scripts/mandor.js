@@ -389,6 +389,24 @@ function main(argv) {
     value = mutatePlan(store, options);
   } else if (resource === 'init') {
     value = initScaffold(store, options);
+    const configStore = require('./config-store');
+    try {
+      const created = value && value.created;
+      const fresh = Array.isArray(created) && created.includes('.mandor');
+      if (fresh) {
+        const result = configStore.append({
+          name: path.basename(store.project) || path.basename(path.resolve(store.project)),
+          path: path.resolve(store.project)
+        });
+        value.registered = result.added;
+        value.registered_path = result.entry.path;
+      } else if (created === 'already present') {
+        value.registered = false;
+        value.registered_path = path.resolve(store.project);
+      }
+    } catch (error) {
+      value.registered_error = error.message;
+    }
   } else {
     throw new PMError(`unknown command: ${resource} (expected: init, milestone, plan, dashboard)`);
   }
@@ -399,7 +417,14 @@ function main(argv) {
 function runDashboard(argv, parsed, options) {
   const { spawn } = require('child_process');
   const args = [path.join(__dirname, 'dashboard-server.js')];
-  if (parsed.project && parsed.project !== '.') args.push('--project', parsed.project);
+  if (parsed.project && parsed.project !== '.') {
+    // kept for backwards compatibility: pre-register the project path so the
+    // dashboard can see it without requiring a separate `mandor init` run.
+    try {
+      const configStore = require('./config-store');
+      configStore.append({ name: path.basename(path.resolve(parsed.project)), path: path.resolve(parsed.project) });
+    } catch (_) {}
+  }
   if (options.port !== undefined) args.push('--port', String(options.port));
   if (options.host !== undefined) args.push('--host', String(options.host));
   const child = spawn(process.execPath, args, { stdio: 'inherit' });

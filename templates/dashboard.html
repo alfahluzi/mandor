@@ -341,14 +341,14 @@
         for (const p of payload.projects) {
           const opt = document.createElement('option');
           opt.value = p.path;
-          opt.textContent = p.path === payload.default ? `${p.name} (default)` : p.name;
+          opt.textContent = p.name;
           opt.title = p.path;
           sel.appendChild(opt);
         }
         if (payload.projects.length === 0) {
           const opt = document.createElement('option');
           opt.value = '';
-          opt.textContent = 'no projects found';
+          opt.textContent = 'no projects registered — run `mandor init` in a project';
           sel.appendChild(opt);
           sel.disabled = true;
           state.activeProject = null;
@@ -356,22 +356,20 @@
         }
         const url = new URL(location.href);
         const requested = url.searchParams.get('project');
-        const defaultHasArtifact = payload.projects.some(p => p.path === payload.default);
-        const initial = requested
-          || (defaultHasArtifact ? payload.default : payload.projects[0].path);
+        const initial = requested && payload.projects.some(p => p.path === requested)
+          ? requested
+          : payload.projects[0].path;
         state.activeProject = initial;
         sel.value = initial;
+        if (initial !== payload.projects[0].path || url.searchParams.get('project')) {
+          const u = new URL(location.href);
+          u.searchParams.set('project', initial);
+          history.replaceState({}, '', u);
+        }
         sel.addEventListener('change', () => {
           const next = sel.value;
           const u = new URL(location.href);
-          const defaultStillHas = payload.projects.some(p => p.path === payload.default);
-          if (next === payload.default && !defaultStillHas) {
-            u.searchParams.delete('project');
-          } else if (next === payload.default) {
-            u.searchParams.delete('project');
-          } else {
-            u.searchParams.set('project', next);
-          }
+          u.searchParams.set('project', next);
           history.replaceState({}, '', u);
           state.activeProject = next;
           state.sig = null;

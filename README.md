@@ -70,12 +70,12 @@ Plan initialization is idempotent and preserves existing phase files.
 Live dashboard:
 
 ```sh
-mandor dashboard [--project PATH] [--port 4173]
+mandor dashboard [--port 4173]
 ```
 
-Without `--project`, the server scans the current directory's parent + siblings
-for any folder containing `.mandor/` and lets you pick from the header
-dropdown. `MANDOR_PROJECTS_ROOTS=/path1,/path2` adds custom discovery roots.
+Projects are read from `<skill-dir>/config.json`. Register a project by running
+`mandor init` in it; pick from the header dropdown afterwards. Override the
+registry location with `MANDOR_CONFIG=/path/to/config.json`.
 
 The live server serves the UI and re-reads the artifact tree on every `/api/data`
 poll (~1s), so both JSON and Markdown changes appear automatically within about a

@@ -112,4 +112,8 @@ if [ -e "$target" ]; then
 fi
 mv "$staged" "$target"
 chmod +x "$target/bin/mandor" "$target/scripts"/*.js 2>/dev/null || true
+if [ ! -f "$target/config.json" ]; then
+  printf '[]\n' > "$target/config.json"
+  chmod 600 "$target/config.json" 2>/dev/null || true
+fi
 echo "Installed mandor at $target"
