@@ -1,6 +1,6 @@
 # mandor — AGENTS
 
-Portable Node.js skill package. No `package.json`, no lint/typecheck/formatter config, no CI, no `.gitignore`. Everything below is hard-won context.
+Portable Node.js skill package. No `package.json`, no lint/typecheck/formatter config, no CI. The only `.gitignore` entry is `config.json` — the untracked runtime project registry (`install.sh` seeds a fresh empty array per install). Everything below is hard-won context.
 
 ## What this repo is
 

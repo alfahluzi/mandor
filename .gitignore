@@ -1,0 +1,3 @@
+# Runtime project registry written by `mandor init` (see scripts/config-store.js).
+# Not tracked by design; install.sh seeds a fresh empty array per install.
+config.json
